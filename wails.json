@@ -1,0 +1,20 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "ForgeFlow",
+  "outputfilename": "ForgeFlow",
+  "frontend:install": "npm install",
+  "frontend:build": "npm run build",
+  "frontend:dev:watcher": "npm run dev",
+  "frontend:dev:serverUrl": "auto",
+  "info": {
+    "companyName": "ForgeFlow",
+    "productName": "ForgeFlow",
+    "productVersion": "0.1.0",
+    "copyright": "Copyright © 2026 ForgeFlow",
+    "comments": "Local automation. Zero cloud. Full control."
+  },
+  "author": {
+    "name": "OFFLINE",
+    "email": "adsramzi@gmail.com"
+  }
+}

@@ -1,0 +1,216 @@
+name: Build ForgeFlow
+
+on:
+  push:
+    branches: [master, main]
+    tags: ["v*"]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows
+            arch: amd64
+          - os: windows-latest
+            platform: windows
+            arch: arm64
+          - os: macos-latest
+            platform: darwin
+            arch: amd64
+          - os: macos-latest
+            platform: darwin
+            arch: arm64
+          - os: ubuntu-latest
+            platform: linux
+            arch: amd64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get version from tag or use default
+        id: version
+        shell: bash
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+          else
+            VERSION="0.1.0-dev"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building version: $VERSION"
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+          cache: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install NSIS (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          choco install nsis -y
+          $env:PATH = "C:\Program Files (x86)\NSIS;$env:PATH"
+          echo "C:\Program Files (x86)\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          makensis /VERSION
+          
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
+          
+      - name: Setup webkit2gtk-4.0 compatibility
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo ln -sf /usr/lib/x86_64-linux-gnu/pkgconfig/webkit2gtk-4.1.pc /usr/lib/x86_64-linux-gnu/pkgconfig/webkit2gtk-4.0.pc
+
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
+      - name: Build (Windows with NSIS)
+        if: matrix.os == 'windows-latest'
+        run: |
+          wails build -platform ${{ matrix.platform }}/${{ matrix.arch }} -nsis
+          dir build\bin
+
+      - name: Build (macOS/Linux)
+        if: matrix.os != 'windows-latest'
+        run: wails build -platform ${{ matrix.platform }}/${{ matrix.arch }}
+
+      - name: Rename artifacts with version (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          if (Test-Path "build/bin/ForgeFlow.exe") {
+            Rename-Item "build/bin/ForgeFlow.exe" "ForgeFlow-v${{ steps.version.outputs.version }}-windows-${{ matrix.arch }}.exe"
+          }
+          if (Test-Path "build/bin/ForgeFlow-${{ matrix.arch }}-installer.exe") {
+            Rename-Item "build/bin/ForgeFlow-${{ matrix.arch }}-installer.exe" "ForgeFlow-v${{ steps.version.outputs.version }}-windows-${{ matrix.arch }}-installer.exe"
+          }
+
+      - name: Rename artifacts with version (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          if [ -d "build/bin/ForgeFlow.app" ]; then
+            mv "build/bin/ForgeFlow.app" "build/bin/ForgeFlow-v${{ steps.version.outputs.version }}-macos-${{ matrix.arch }}.app"
+          fi
+
+      - name: Rename artifacts with version (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          if [ -f "build/bin/ForgeFlow" ]; then
+            mv "build/bin/ForgeFlow" "build/bin/ForgeFlow-v${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}"
+          fi
+
+      - name: Upload artifact (Windows)
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ForgeFlow-windows-${{ matrix.arch }}
+          path: |
+            build/bin/ForgeFlow-v${{ steps.version.outputs.version }}-windows-${{ matrix.arch }}.exe
+            build/bin/ForgeFlow-v${{ steps.version.outputs.version }}-windows-${{ matrix.arch }}-installer.exe
+
+      - name: Upload artifact (macOS)
+        if: matrix.os == 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ForgeFlow-macos-${{ matrix.arch }}
+          path: build/bin/ForgeFlow-v${{ steps.version.outputs.version }}-macos-${{ matrix.arch }}.app
+
+      - name: Upload artifact (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ForgeFlow-linux-${{ matrix.arch }}
+          path: build/bin/ForgeFlow-v${{ steps.version.outputs.version }}-linux-${{ matrix.arch }}
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Get version from tag
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Release version: $VERSION"
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare release files
+        run: |
+          mkdir -p release
+          
+          # Windows amd64
+          if [ -f artifacts/ForgeFlow-windows-amd64/ForgeFlow-v${{ steps.version.outputs.version }}-windows-amd64.exe ]; then
+            cp artifacts/ForgeFlow-windows-amd64/ForgeFlow-v${{ steps.version.outputs.version }}-windows-amd64.exe release/
+          fi
+          if [ -f artifacts/ForgeFlow-windows-amd64/ForgeFlow-v${{ steps.version.outputs.version }}-windows-amd64-installer.exe ]; then
+            cp artifacts/ForgeFlow-windows-amd64/ForgeFlow-v${{ steps.version.outputs.version }}-windows-amd64-installer.exe release/
+          fi
+          
+          # Windows arm64
+          if [ -f artifacts/ForgeFlow-windows-arm64/ForgeFlow-v${{ steps.version.outputs.version }}-windows-arm64.exe ]; then
+            cp artifacts/ForgeFlow-windows-arm64/ForgeFlow-v${{ steps.version.outputs.version }}-windows-arm64.exe release/
+          fi
+          if [ -f artifacts/ForgeFlow-windows-arm64/ForgeFlow-v${{ steps.version.outputs.version }}-windows-arm64-installer.exe ]; then
+            cp artifacts/ForgeFlow-windows-arm64/ForgeFlow-v${{ steps.version.outputs.version }}-windows-arm64-installer.exe release/
+          fi
+          
+          # macOS amd64 (Intel)
+          if [ -d artifacts/ForgeFlow-macos-amd64/ForgeFlow-v${{ steps.version.outputs.version }}-macos-amd64.app ]; then
+            cd artifacts/ForgeFlow-macos-amd64
+            zip -r ../../release/ForgeFlow-v${{ steps.version.outputs.version }}-macos-amd64.zip ForgeFlow-v${{ steps.version.outputs.version }}-macos-amd64.app
+            cd ../..
+          fi
+          
+          # macOS arm64 (Apple Silicon)
+          if [ -d artifacts/ForgeFlow-macos-arm64/ForgeFlow-v${{ steps.version.outputs.version }}-macos-arm64.app ]; then
+            cd artifacts/ForgeFlow-macos-arm64
+            zip -r ../../release/ForgeFlow-v${{ steps.version.outputs.version }}-macos-arm64.zip ForgeFlow-v${{ steps.version.outputs.version }}-macos-arm64.app
+            cd ../..
+          fi
+          
+          # Linux amd64
+          if [ -f artifacts/ForgeFlow-linux-amd64/ForgeFlow-v${{ steps.version.outputs.version }}-linux-amd64 ]; then
+            cp artifacts/ForgeFlow-linux-amd64/ForgeFlow-v${{ steps.version.outputs.version }}-linux-amd64 release/
+            chmod +x release/ForgeFlow-v${{ steps.version.outputs.version }}-linux-amd64
+          fi
+          
+          ls -la release/
+
+      - name: Generate checksums
+        run: |
+          cd release
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: release/*
+          fail_on_unmatched_files: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
