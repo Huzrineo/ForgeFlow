@@ -27,6 +27,28 @@ export interface Flow {
   enabled: boolean;
 }
 
+export interface ExecutionResult {
+  nodeId: string;
+  status: "idle" | "running" | "success" | "error";
+  output?: unknown;
+  error?: string;
+  duration: number;
+  timestamp: string;
+}
+
+export interface FlowExecution {
+  id: string;
+  flowId: string;
+  flowName?: string;
+  status: "idle" | "running" | "success" | "error";
+  results: ExecutionResult[];
+  startedAt: string;
+  endedAt?: string;
+  nodeCount?: number;
+  successCount?: number;
+  errorCount?: number;
+}
+
 export interface Trigger {
   id: string;
   type: "file" | "time" | "http" | "manual" | "system";

@@ -4,8 +4,15 @@ import Sidebar from "@/components/layout/Sidebar";
 import StatusBar from "@/components/layout/StatusBar";
 import NodeSettings from "@/components/layout/NodeSettings";
 import Settings from "@/components/layout/Settings";
+import WorkflowsPanel from "@/components/layout/WorkflowsPanel";
+import TemplatesModal from "@/components/layout/TemplatesModal";
+import ExecutionHistory from "@/components/layout/ExecutionHistory";
+import ImportExport from "@/components/layout/ImportExport";
 import FlowCanvas from "@/components/flow/FlowCanvas";
+import { DialogProvider } from "@/components/ui";
 import { useFlowStore } from "@/stores/flowStore";
+import { useWorkflowStore } from "@/stores/workflowStore";
+import { useSettingsStore } from "@/stores/settingsStore";
 import { useEffect, useState } from "react";
 
 function SplashScreen() {
@@ -47,11 +54,16 @@ function SplashScreen() {
 }
 
 export default function App() {
-  const { isDarkMode, selectedNodeId, setSelectedNodeId, settingsOpen, setSettingsOpen } = useFlowStore();
+  const { selectedNodeId, setSelectedNodeId, settingsOpen, setSettingsOpen } = useFlowStore();
+  const { executionHistoryOpen, setExecutionHistoryOpen, importExportOpen, setImportExportOpen } = useWorkflowStore();
+  const { loadSettings, applyTheme } = useSettingsStore();
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", isDarkMode);
+    // Load settings from backend and apply theme
+    loadSettings().then(() => {
+      applyTheme();
+    });
     
     // Show splash for minimum 1 second
     const timer = setTimeout(() => {
@@ -59,7 +71,7 @@ export default function App() {
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [isDarkMode]);
+  }, [loadSettings, applyTheme]);
 
   if (isLoading) {
     return <SplashScreen />;
@@ -81,6 +93,11 @@ export default function App() {
         </div>
         <StatusBar />
         {settingsOpen && <Settings onClose={() => setSettingsOpen(false)} />}
+        {executionHistoryOpen && <ExecutionHistory onClose={() => setExecutionHistoryOpen(false)} />}
+        {importExportOpen && <ImportExport onClose={() => setImportExportOpen(false)} />}
+        <WorkflowsPanel />
+        <TemplatesModal />
+        <DialogProvider />
       </div>
     </ReactFlowProvider>
   );

@@ -72,12 +72,14 @@ type Engine struct {
 	mu         sync.RWMutex
 	executions map[string]*FlowExecution
 	cancel     map[string]context.CancelFunc
+	storage    *Storage
 }
 
-func NewEngine() *Engine {
+func NewEngine(storage *Storage) *Engine {
 	return &Engine{
 		executions: make(map[string]*FlowExecution),
 		cancel:     make(map[string]context.CancelFunc),
+		storage:    storage,
 	}
 }
 
@@ -117,6 +119,13 @@ func (e *Engine) executeFlow(ctx context.Context, flow *Flow, execution *FlowExe
 			execution.Status = StatusSuccess
 		}
 		e.mu.Unlock()
+
+		// Save execution history
+		if e.storage != nil {
+			if data, err := json.Marshal(execution); err == nil {
+				e.storage.SaveExecution(string(data))
+			}
+		}
 	}()
 
 	nodeMap := make(map[string]*FlowNode)

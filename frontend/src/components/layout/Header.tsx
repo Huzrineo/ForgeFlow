@@ -11,9 +11,13 @@ import {
   Minus,
   X,
   Settings,
+  LayoutTemplate,
+  History,
+  FileDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useFlowStore } from "@/stores/flowStore";
+import { useWorkflowStore } from "@/stores/workflowStore";
 import { WindowMinimise, WindowToggleMaximise, Quit } from "../../../wailsjs/runtime/runtime";
 
 export default function Header() {
@@ -30,6 +34,7 @@ export default function Header() {
     stopFlow,
     setSettingsOpen,
   } = useFlowStore();
+  const { setWorkflowPanelOpen, setTemplateModalOpen, setExecutionHistoryOpen, setImportExportOpen } = useWorkflowStore();
 
   const activeFlow = flows.find((f) => f.id === activeFlowId);
 
@@ -91,8 +96,16 @@ export default function Header() {
           <Plus className="w-3.5 h-3.5" />
         </Button>
 
-        <Button variant="ghost" size="sm" className="h-7 px-2" title="Open flow">
+        <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => setWorkflowPanelOpen(true)} title="Open workflows">
           <FolderOpen className="w-3.5 h-3.5" />
+        </Button>
+
+        <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => setTemplateModalOpen(true)} title="Templates">
+          <LayoutTemplate className="w-3.5 h-3.5" />
+        </Button>
+
+        <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => setImportExportOpen(true)} title="Import/Export">
+          <FileDown className="w-3.5 h-3.5" />
         </Button>
 
         <Button variant="ghost" size="sm" className="h-7 px-2" onClick={handleSave} disabled={nodes.length === 0} title="Save flow">
@@ -123,6 +136,10 @@ export default function Header() {
 
         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={clearCanvas} disabled={nodes.length === 0} title="Clear canvas">
           <Trash2 className="w-3.5 h-3.5" />
+        </Button>
+
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setExecutionHistoryOpen(true)} title="Execution history">
+          <History className="w-3.5 h-3.5" />
         </Button>
 
         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setSettingsOpen(true)} title="Settings">

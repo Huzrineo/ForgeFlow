@@ -4,9 +4,15 @@ import type { OnNodesChange, OnEdgesChange, OnConnect } from "@xyflow/react";
 import { applyNodeChanges, applyEdgeChanges, addEdge } from "@xyflow/react";
 import type { NodeData, FlowNode, FlowEdge, Flow } from "@/types/flow";
 import { RunFlow, StopExecution } from "../../wailsjs/go/main/Engine";
+import { SaveExecution } from "../../wailsjs/go/main/Storage";
 import { WorkflowExecutor } from "@/executor/WorkflowExecutor";
 import type { NodeResult } from "@/executor/WorkflowExecutor";
 import type { LogLevel } from "@/handlers/types";
+
+interface HistoryEntry {
+  nodes: FlowNode[];
+  edges: FlowEdge[];
+}
 
 interface FlowState {
   nodes: FlowNode[];
@@ -21,6 +27,10 @@ interface FlowState {
   settingsOpen: boolean;
   theme: string;
   logs: string[];
+  history: HistoryEntry[];
+  historyIndex: number;
+  clipboard: FlowNode | null;
+  maxHistorySize: number;
 
   onNodesChange: OnNodesChange<FlowNode>;
   onEdgesChange: OnEdgesChange<FlowEdge>;
@@ -44,6 +54,14 @@ interface FlowState {
   setTheme: (theme: string) => void;
   addLog: (message: string) => void;
   clearLogs: () => void;
+  pushHistory: () => void;
+  undo: () => void;
+  redo: () => void;
+  canUndo: () => boolean;
+  canRedo: () => boolean;
+  copyNode: (nodeId: string) => void;
+  pasteNode: () => void;
+  duplicateNode: (nodeId: string) => void;
 }
 
 export const useFlowStore = create<FlowState>()(
@@ -61,24 +79,124 @@ export const useFlowStore = create<FlowState>()(
       settingsOpen: false,
       theme: "vscode",
       logs: [],
+      history: [],
+      historyIndex: -1,
+      clipboard: null,
+      maxHistorySize: 50,
+
+      pushHistory: () => {
+        const { nodes, edges, history, historyIndex, maxHistorySize } = get();
+        const newHistory = history.slice(0, historyIndex + 1);
+        newHistory.push({
+          nodes: JSON.parse(JSON.stringify(nodes)),
+          edges: JSON.parse(JSON.stringify(edges)),
+        });
+        if (newHistory.length > maxHistorySize) {
+          newHistory.shift();
+        }
+        set({ history: newHistory, historyIndex: newHistory.length - 1 });
+      },
+
+      undo: () => {
+        const { history, historyIndex } = get();
+        if (historyIndex > 0) {
+          const prevIndex = historyIndex - 1;
+          const entry = history[prevIndex];
+          set({
+            nodes: JSON.parse(JSON.stringify(entry.nodes)),
+            edges: JSON.parse(JSON.stringify(entry.edges)),
+            historyIndex: prevIndex,
+          });
+        }
+      },
+
+      redo: () => {
+        const { history, historyIndex } = get();
+        if (historyIndex < history.length - 1) {
+          const nextIndex = historyIndex + 1;
+          const entry = history[nextIndex];
+          set({
+            nodes: JSON.parse(JSON.stringify(entry.nodes)),
+            edges: JSON.parse(JSON.stringify(entry.edges)),
+            historyIndex: nextIndex,
+          });
+        }
+      },
+
+      canUndo: () => get().historyIndex > 0,
+      canRedo: () => get().historyIndex < get().history.length - 1,
+
+      copyNode: (nodeId) => {
+        const node = get().nodes.find((n) => n.id === nodeId);
+        if (node) {
+          set({ clipboard: JSON.parse(JSON.stringify(node)) });
+        }
+      },
+
+      pasteNode: () => {
+        const { clipboard, pushHistory } = get();
+        if (clipboard) {
+          pushHistory();
+          const newNode: FlowNode = {
+            ...JSON.parse(JSON.stringify(clipboard)),
+            id: crypto.randomUUID(),
+            position: {
+              x: clipboard.position.x + 50,
+              y: clipboard.position.y + 50,
+            },
+          };
+          set({ nodes: [...get().nodes, newNode] });
+        }
+      },
+
+      duplicateNode: (nodeId) => {
+        const node = get().nodes.find((n) => n.id === nodeId);
+        if (node) {
+          get().pushHistory();
+          const newNode: FlowNode = {
+            ...JSON.parse(JSON.stringify(node)),
+            id: crypto.randomUUID(),
+            position: {
+              x: node.position.x + 50,
+              y: node.position.y + 50,
+            },
+          };
+          set({ nodes: [...get().nodes, newNode] });
+        }
+      },
 
       onNodesChange: (changes) => {
+        const hasStructuralChange = changes.some(
+          (c) => c.type === 'remove' || c.type === 'add'
+        );
+        if (hasStructuralChange) {
+          get().pushHistory();
+        }
         set({ nodes: applyNodeChanges(changes, get().nodes) });
       },
 
       onEdgesChange: (changes) => {
+        const hasStructuralChange = changes.some(
+          (c) => c.type === 'remove' || c.type === 'add'
+        );
+        if (hasStructuralChange) {
+          get().pushHistory();
+        }
         set({ edges: applyEdgeChanges(changes, get().edges) });
       },
 
       onConnect: (connection) => {
+        get().pushHistory();
         set({ edges: addEdge(connection, get().edges) });
       },
 
       addNode: (node) => {
+        get().pushHistory();
         set({ nodes: [...get().nodes, node] });
       },
 
       addNodeAtCenter: (data) => {
+        get().pushHistory();
         const nodes = get().nodes;
         const newNode: FlowNode = {
           id: crypto.randomUUID(),
@@ -90,6 +208,7 @@ export const useFlowStore = create<FlowState>()(
       },
 
       removeNode: (nodeId) => {
+        get().pushHistory();
         set({
           nodes: get().nodes.filter((n) => n.id !== nodeId),
           edges: get().edges.filter((e) => e.source !== nodeId && e.target !== nodeId),
@@ -155,18 +274,34 @@ export const useFlowStore = create<FlowState>()(
 
       toggleDarkMode: () => set({ isDarkMode: !get().isDarkMode }),
       toggleSidebar: () => set({ sidebarCollapsed: !get().sidebarCollapsed }),
-      clearCanvas: () => set({ nodes: [], edges: [], activeFlowId: null }),
+      clearCanvas: () => {
+        get().pushHistory();
+        set({ nodes: [], edges: [], activeFlowId: null });
+      },
 
       runFlow: async () => {
-        const { nodes, edges, updateNodeData, addLog } = get();
+        const { nodes, edges, updateNodeData, addLog, activeFlowId, flows } = get();
         const executionId = crypto.randomUUID();
         set({ isRunning: true, executionId });
+
+        const activeFlow = flows.find(f => f.id === activeFlowId);
+        const flowName = activeFlow?.name || "Untitled Flow";
 
         addLog(`🚀 Starting flow execution (ID: ${executionId.slice(0, 8)})`);
         addLog(`📊 Flow contains ${nodes.length} nodes and ${edges.length} connections`);
 
         // Reset all node statuses
         nodes.forEach((node) => updateNodeData(node.id, { status: "idle" }));
+
+        // Track execution results
+        const executionResults: Array<{
+          nodeId: string;
+          status: "idle" | "running" | "success" | "error";
+          output?: unknown;
+          error?: string;
+          duration: number;
+          timestamp: string;
+        }> = [];
 
         // Create executor with progress callback
         const onProgress = (results: NodeResult[]) => {
@@ -179,6 +314,27 @@ export const useFlowStore = create<FlowState>()(
               skipped: "idle",
             } as const;
             updateNodeData(result.nodeId, { status: statusMap[result.status] });
+            
+            // Track result
+            const existingIdx = executionResults.findIndex(r => r.nodeId === result.nodeId);
+            const duration = result.endedAt && result.startedAt 
+              ? result.endedAt - result.startedAt 
+              : 0;
+            
+            const execResult = {
+              nodeId: result.nodeId,
+              status: statusMap[result.status],
+              output: result.output,
+              error: result.error,
+              duration,
+              timestamp: new Date().toISOString(),
+            };
+            
+            if (existingIdx >= 0) {
+              executionResults[existingIdx] = execResult;
+            } else {
+              executionResults.push(execResult);
+            }
           });
         };
 
@@ -194,6 +350,8 @@ export const useFlowStore = create<FlowState>()(
         };
 
         const executor = new WorkflowExecutor(nodes, edges, onProgress, onLog);
+        const startedAt = new Date().toISOString();
+        let finalStatus: "success" | "error" = "success";
 
         try {
           await executor.execute();
@@ -220,9 +378,28 @@ export const useFlowStore = create<FlowState>()(
           };
           await RunFlow(JSON.stringify(flowData));
         } catch (error) {
+          finalStatus = "error";
           addLog(`💥 Flow execution failed: ${error}`);
           console.error("Flow execution failed:", error);
         } finally {
+          const endedAt = new Date().toISOString();
+          
+          // Save execution history
+          try {
+            const execution = {
+              id: executionId,
+              flowId: activeFlowId || "unsaved",
+              flowName,
+              status: finalStatus,
+              results: executionResults,
+              startedAt,
+              endedAt,
+            };
+            await SaveExecution(JSON.stringify(execution));
+          } catch (error) {
+            console.error("Failed to save execution history:", error);
+          }
+          
           set({ isRunning: false, executionId: null });
         }
       },

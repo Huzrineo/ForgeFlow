@@ -14,8 +14,8 @@ var assets embed.FS
 
 func main() {
 	app := NewApp()
-	engine := NewEngine()
 	storage := NewStorage()
+	engine := NewEngine(storage)
 
 	err := wails.Run(&options.App{
 		Title:             "ForgeFlow",
