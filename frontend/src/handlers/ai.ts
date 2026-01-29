@@ -4,8 +4,9 @@ import type { HandlerContext } from './types';
 const conversationMemory: Record<string, Array<{ role: string; content: string; timestamp: number }>> = {};
 
 export const aiHandlers: Record<string, (ctx: HandlerContext) => Promise<any>> = {
-  action_ai: async ({ data, onLog }) => {
+  action_ai: async (ctx) => {
     const { 
+      provider = 'openai',
       prompt, 
       systemPrompt, 
       model, 
@@ -14,22 +15,27 @@ export const aiHandlers: Record<string, (ctx: HandlerContext) => Promise<any>> =
       memoryKey, 
       maxMessages, 
       memoryExpiry 
-    } = data;
+    } = ctx.data;
     
-    onLog('info', `🤖 AI Request`);
-    onLog('info', `   Model: ${model || 'default'}`);
-    onLog('info', `   Temperature: ${temperature || 0.7}`);
+    const { onLog, api, settings } = ctx;
     
-    if (enableMemory && memoryKey) {
-      onLog('info', `   💾 Memory: ${memoryKey} (max ${maxMessages} msgs)`);
+    onLog('info', `🤖 AI Request (${provider})`);
+    
+    // Get provider config
+    const config = settings.aiServices[provider as keyof typeof settings.aiServices];
+    if (!config || (!config.enabled && provider !== 'custom')) {
+      throw new Error(`AI Provider "${provider}" is not enabled. Please configure it in Settings > AI Endpoints.`);
     }
-    
+
+    if (!config.apiKey && provider !== 'custom') {
+      throw new Error(`API Key for "${provider}" is missing. Please set it in Settings > AI Endpoints.`);
+    }
+
     try {
       // Handle conversation memory
       let messages: Array<{ role: string; content: string }> = [];
       
       if (enableMemory && memoryKey) {
-        // Get or create conversation
         if (!conversationMemory[memoryKey]) {
           conversationMemory[memoryKey] = [];
         }
@@ -43,16 +49,13 @@ export const aiHandlers: Record<string, (ctx: HandlerContext) => Promise<any>> =
           );
         }
         
-        // Limit message count
-        const limit = parseInt(maxMessages) || 20;
-        if (conversationMemory[memoryKey].length > limit) {
-          conversationMemory[memoryKey] = conversationMemory[memoryKey].slice(-limit);
-        }
-        
         // Build message history
-        messages = conversationMemory[memoryKey].map(({ role, content }) => ({ role, content }));
+        const limit = parseInt(maxMessages) || 20;
+        messages = conversationMemory[memoryKey].slice(-limit).map(({ role, content }) => ({ role, content }));
         
-        onLog('info', `   📚 Loaded ${messages.length} previous messages`);
+        if (messages.length > 0) {
+          onLog('info', `   📚 Loaded ${messages.length} messages from memory`);
+        }
       }
       
       // Add system prompt if provided
@@ -63,11 +66,64 @@ export const aiHandlers: Record<string, (ctx: HandlerContext) => Promise<any>> =
       // Add current user prompt
       messages.push({ role: 'user', content: prompt });
       
-      // Simulate AI API call
-      await new Promise(r => setTimeout(r, 600));
+      // Determine endpoint and model
+      let url = '';
+      let defaultModel = '';
       
-      const response = `AI response to: "${prompt.substring(0, 50)}..." (using ${model || 'default'} model)`;
-      const tokens = Math.floor(Math.random() * 800 + 200);
+      switch (provider) {
+        case 'openai':
+          url = 'https://api.openai.com/v1/chat/completions';
+          defaultModel = 'gpt-4o-mini';
+          break;
+        case 'groq':
+          url = 'https://api.groq.com/openai/v1/chat/completions';
+          defaultModel = 'llama3-8b-8192';
+          break;
+        case 'openrouter':
+          url = 'https://openrouter.ai/api/v1/chat/completions';
+          defaultModel = 'google/gemini-flash-1.5';
+          break;
+        case 'custom':
+          url = config.baseUrl || '';
+          if (!url) throw new Error('Base URL is required for custom AI provider');
+          if (!url.endsWith('/chat/completions')) {
+            url = url.replace(/\/+$/, '') + '/chat/completions';
+          }
+          defaultModel = model || 'gpt-3.5-turbo'; // Fallback
+          break;
+      }
+
+      onLog('info', `   Model: ${model || defaultModel}`);
+      
+      // Make the request
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (config.apiKey) {
+        headers['Authorization'] = `Bearer ${config.apiKey}`;
+      }
+      
+      if (provider === 'openrouter') {
+        headers['HTTP-Referer'] = 'https://forgeflow.app';
+        headers['X-Title'] = 'ForgeFlow';
+      }
+
+      const response = await api.http.post(url, {
+        model: model || defaultModel,
+        messages,
+        temperature: temperature ?? 0.7,
+      }, headers);
+
+      if (response.error) throw new Error(response.error);
+      
+      const result = typeof response.json === 'object' ? response.json : JSON.parse(response.body);
+      
+      if (result.error) {
+        throw new Error(result.error.message || JSON.stringify(result.error));
+      }
+
+      const content = result.choices[0].message.content;
       
       // Save to memory if enabled
       if (enableMemory && memoryKey) {
@@ -78,17 +134,15 @@ export const aiHandlers: Record<string, (ctx: HandlerContext) => Promise<any>> =
         });
         conversationMemory[memoryKey].push({
           role: 'assistant',
-          content: response,
+          content,
           timestamp: Date.now()
         });
-        
-        onLog('info', `   💾 Saved to memory (${conversationMemory[memoryKey].length} total)`);
       }
       
-      onLog('success', `✓ Generated ${tokens} tokens`);
-      onLog('info', `   💰 Cost: $0.00${Math.floor(Math.random() * 9 + 1)}`);
+      const tokens = result.usage?.total_tokens || 0;
+      onLog('success', `✓ AI Response received (${tokens} tokens)`);
       
-      return response;
+      return content;
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       onLog('error', `✗ AI request failed: ${errorMsg}`);
@@ -96,88 +150,28 @@ export const aiHandlers: Record<string, (ctx: HandlerContext) => Promise<any>> =
     }
   },
 
-  // Legacy AI handlers (kept for backward compatibility)
-  ai_summarize: async ({ data, onLog }) => {
-    onLog('info', `🤖 AI Summarize`);
-    onLog('info', `   Model: ${data.model || 'default'}`);
-    onLog('info', `   Input: ${data.prompt?.substring(0, 50)}...`);
-    
+  // Legacy AI handlers updated to use the same logic
+  ai_summarize: async (ctx) => {
+    ctx.data.prompt = `Please summarize the following text:\n\n${ctx.data.prompt}`;
+    return aiHandlers.action_ai(ctx);
+  },
+
+  ai_classify: async (ctx) => {
+    ctx.data.prompt = `Classify the following text into one of these categories: ${ctx.data.categories}\n\nText: ${ctx.data.prompt}\n\nOnly respond with the category name.`;
+    return aiHandlers.action_ai(ctx);
+  },
+
+  ai_extract: async (ctx) => {
+    ctx.data.prompt = `Extract data from the following text based on this JSON schema: ${ctx.data.schema}\n\nText: ${ctx.data.prompt}\n\nOnly respond with the JSON object.`;
+    const result = await aiHandlers.action_ai(ctx);
     try {
-      await new Promise(r => setTimeout(r, 500));
-      
-      const summary = `Summary of: ${data.prompt?.substring(0, 100)}...`;
-      const tokens = Math.floor(Math.random() * 500 + 100);
-      
-      onLog('success', `✓ Generated ${tokens} tokens`);
-      onLog('info', `   💰 Cost: $0.00${Math.floor(Math.random() * 9 + 1)}`);
-      
-      return summary;
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      onLog('error', `✗ AI request failed: ${errorMsg}`);
-      throw error;
+      return JSON.parse(result);
+    } catch {
+      return result;
     }
   },
 
-  ai_classify: async ({ data, onLog }) => {
-    onLog('info', `🤖 AI Classify`);
-    onLog('info', `   Categories: ${data.categories}`);
-    
-    try {
-      await new Promise(r => setTimeout(r, 400));
-      
-      const categories = data.categories?.split(',').map((c: string) => c.trim()) || [];
-      const category = categories[Math.floor(Math.random() * categories.length)] || 'unknown';
-      
-      onLog('success', `✓ Classified as: ${category}`);
-      return category;
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      onLog('error', `✗ Classification failed: ${errorMsg}`);
-      throw error;
-    }
-  },
-
-  ai_extract: async ({ data, onLog }) => {
-    onLog('info', `🤖 AI Extract Data`);
-    onLog('info', `   Schema: ${data.schema?.substring(0, 50)}...`);
-    
-    try {
-      await new Promise(r => setTimeout(r, 450));
-      
-      let schema = {};
-      try {
-        schema = JSON.parse(data.schema || '{}');
-      } catch {
-        onLog('warn', '⚠️  Invalid schema, using empty object');
-      }
-      
-      onLog('success', `✓ Extracted data`);
-      return schema;
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      onLog('error', `✗ Extraction failed: ${errorMsg}`);
-      throw error;
-    }
-  },
-
-  ai_generate: async ({ data, onLog }) => {
-    onLog('info', `🤖 AI Generate Text`);
-    onLog('info', `   Prompt: ${data.prompt?.substring(0, 50)}...`);
-    onLog('info', `   Temperature: ${data.temperature || 0.7}`);
-    
-    try {
-      await new Promise(r => setTimeout(r, 600));
-      
-      const generated = `Generated text based on: ${data.prompt?.substring(0, 50)}...`;
-      const tokens = Math.floor(Math.random() * 800 + 200);
-      
-      onLog('success', `✓ Generated ${tokens} tokens`);
-      return generated;
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      onLog('error', `✗ Generation failed: ${errorMsg}`);
-      throw error;
-    }
+  ai_generate: async (ctx) => {
+    return aiHandlers.action_ai(ctx);
   },
 };

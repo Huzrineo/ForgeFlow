@@ -1,6 +1,6 @@
 import type { Node, Edge } from "@xyflow/react";
 
-export type NodeCategory = "trigger" | "condition" | "action" | "ai" | "output" | "loop" | "utility";
+export type NodeCategory = "trigger" | "condition" | "action" | "ai" | "output" | "loop" | "utility" | "apps";
 export type NodeStatus = "idle" | "running" | "success" | "error";
 
 export interface NodeData extends Record<string, unknown> {

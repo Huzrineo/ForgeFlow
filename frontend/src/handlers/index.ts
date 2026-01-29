@@ -7,6 +7,7 @@ import { aiHandlers } from './ai';
 import { outputHandlers } from './outputs';
 import { loopHandlers } from './loops';
 import { utilityHandlers } from './utilities';
+import { appHandlers } from './apps';
 
 export type { HandlerContext, LogLevel, LogCallback } from './types';
 
@@ -19,6 +20,7 @@ export const nodeHandlers: Record<string, (ctx: HandlerContext) => Promise<any>>
   ...outputHandlers,
   ...loopHandlers,
   ...utilityHandlers,
+  ...appHandlers,
 };
 
 export function getHandler(nodeType: string): ((ctx: HandlerContext) => Promise<any>) | undefined {

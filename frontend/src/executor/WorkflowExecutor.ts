@@ -2,6 +2,7 @@
 import type { FlowNode, FlowEdge } from '@/types/flow';
 import { getHandler } from '@/handlers';
 import type { LogCallback, HandlerContext } from '@/handlers/types';
+import { useSettingsStore } from '@/stores/settingsStore';
 
 export interface NodeResult {
   nodeId: string;
@@ -159,6 +160,19 @@ export class WorkflowExecutor {
       variables: this.variables,
       onLog: this.onLog,
       nodeId: node.id,
+      settings: useSettingsStore.getState().settings,
+      api: {
+        http: {
+          get: async (url: string, headers: Record<string, string> = {}) => {
+            const { HTTPRequest } = await import('../../wailsjs/go/main/ActionService');
+            return HTTPRequest('GET', url, headers, '');
+          },
+          post: async (url: string, body: any, headers: Record<string, string> = {}) => {
+            const { HTTPRequest } = await import('../../wailsjs/go/main/ActionService');
+            return HTTPRequest('POST', url, headers, typeof body === 'string' ? body : JSON.stringify(body));
+          },
+        }
+      }
     };
 
     // Execute handler

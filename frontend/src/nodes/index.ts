@@ -6,6 +6,7 @@ import { aiNodes } from './ai';
 import { outputNodes } from './outputs';
 import { loopNodes } from './loops';
 import { utilityNodes } from './utilities';
+import { appNodes } from './apps';
 import type { NodeDefinition } from './types';
 
 // Combine all node definitions
@@ -17,6 +18,7 @@ export const nodeDefinitions: NodeDefinition[] = [
   ...outputNodes,
   ...loopNodes,
   ...utilityNodes,
+  ...appNodes,
 ];
 
 // Helper functions
@@ -36,4 +38,5 @@ export * from './ai';
 export * from './outputs';
 export * from './loops';
 export * from './utilities';
+export * from './apps';
 export * from './types';

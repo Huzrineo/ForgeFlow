@@ -57,6 +57,7 @@ const categoryColors: Record<NodeCategory, string> = {
   output: "text-rose-400",
   loop: "text-violet-400",
   utility: "text-slate-400",
+  apps: "text-teal-400",
 };
 
 const categoryBg: Record<NodeCategory, string> = {
@@ -67,6 +68,7 @@ const categoryBg: Record<NodeCategory, string> = {
   output: "bg-rose-500/10 hover:bg-rose-500/20 border-rose-500/20",
   loop: "bg-violet-500/10 hover:bg-violet-500/20 border-violet-500/20",
   utility: "bg-slate-500/10 hover:bg-slate-500/20 border-slate-500/20",
+  apps: "bg-teal-500/10 hover:bg-teal-500/20 border-teal-500/20",
 };
 
 function DraggableNode({ node }: { node: typeof nodeDefinitions[0] }) {
@@ -143,6 +145,9 @@ export default function Sidebar() {
       { name: 'Conditions', category: 'condition' as NodeCategory },
       { name: 'AI', category: 'ai' as NodeCategory },
       { name: 'Outputs', category: 'output' as NodeCategory },
+      { name: 'Loops', category: 'loop' as NodeCategory },
+      { name: 'Utilities', category: 'utility' as NodeCategory },
+      { name: 'Apps', category: 'apps' as NodeCategory },
     ];
 
     return cats.map(cat => ({

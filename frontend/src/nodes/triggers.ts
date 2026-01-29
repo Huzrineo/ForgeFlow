@@ -110,4 +110,18 @@ export const triggerNodes: NodeDefinition[] = [
       { key: 'delay', label: 'Delay (ms)', type: 'number', placeholder: '0', defaultValue: 0 },
     ],
   },
+  {
+    type: 'trigger_telegram',
+    category: 'trigger',
+    name: 'Telegram',
+    icon: '✈️',
+    color: '#22c55e',
+    description: 'Trigger on Telegram message',
+    inputs: [],
+    outputs: [{ id: 'out', type: 'output', label: 'Message' }],
+    defaultData: { botToken: '' },
+    fields: [
+      { key: 'botToken', label: 'Bot Token', type: 'password', placeholder: '123456:ABC-DEF...', required: true },
+    ],
+  },
 ];

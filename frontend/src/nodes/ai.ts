@@ -11,6 +11,7 @@ export const aiNodes: NodeDefinition[] = [
     inputs: [{ id: 'in', type: 'input' }],
     outputs: [{ id: 'out', type: 'output', label: 'Response' }],
     defaultData: { 
+      provider: 'openai',
       prompt: '', 
       systemPrompt: '', 
       model: '', 
@@ -21,6 +22,12 @@ export const aiNodes: NodeDefinition[] = [
       memoryExpiry: 30 
     },
     fields: [
+      { key: 'provider', label: 'Provider', type: 'select', options: [
+        { value: 'openai', label: 'OpenAI' },
+        { value: 'groq', label: 'Groq' },
+        { value: 'openrouter', label: 'OpenRouter' },
+        { value: 'custom', label: 'Custom Compatible' },
+      ], defaultValue: 'openai' },
       { key: 'model', label: 'Model', type: 'model-select' },
       { key: 'systemPrompt', label: 'System Prompt', type: 'textarea', placeholder: 'You are a helpful assistant...' },
       { key: 'prompt', label: 'User Prompt', type: 'textarea', placeholder: 'Your prompt... Use {{output}} for previous data', required: true },

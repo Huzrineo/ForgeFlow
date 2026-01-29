@@ -1,3 +1,9 @@
+export interface AIServiceConfig {
+  apiKey: string;
+  baseUrl?: string;
+  enabled: boolean;
+}
+
 export interface AppSettings {
   // Appearance
   theme: 'vscode' | 'raycast' | 'github' | 'nord';
@@ -16,6 +22,14 @@ export interface AppSettings {
   notificationsEnabled: boolean;
   soundEnabled: boolean;
   
+  // AI Services
+  aiServices: {
+    openai: AIServiceConfig;
+    groq: AIServiceConfig;
+    openrouter: AIServiceConfig;
+    custom: AIServiceConfig;
+  };
+
   // Advanced
   debugMode: boolean;
   logLevel: 'error' | 'warn' | 'info' | 'debug';
@@ -33,6 +47,12 @@ export const defaultSettings: AppSettings = {
   autoSaveInterval: 30,
   notificationsEnabled: true,
   soundEnabled: false,
+  aiServices: {
+    openai: { apiKey: '', enabled: false },
+    groq: { apiKey: '', enabled: false },
+    openrouter: { apiKey: '', enabled: false },
+    custom: { apiKey: '', baseUrl: '', enabled: false },
+  },
   debugMode: false,
   logLevel: 'info',
 };

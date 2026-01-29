@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { X, Moon, Sun, Palette, Zap, Database, Bell, Shield, Code, RotateCcw, Save } from 'lucide-react';
+import { X, Moon, Sun, Palette, Zap, Database, Bell, Shield, Code, RotateCcw, Save, Sparkles, Brain, Globe } from 'lucide-react';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useDialogStore } from '@/stores/dialogStore';
 import { themes, accentColors } from '@/types/settings';
 import type { AppSettings } from '@/types/settings';
 import { cn } from '@/lib/utils';
 
-type SettingsTab = 'appearance' | 'performance' | 'storage' | 'notifications' | 'security' | 'advanced';
+type SettingsTab = 'appearance' | 'performance' | 'ai' | 'storage' | 'notifications' | 'security' | 'advanced';
 
 interface SettingsProps {
   onClose: () => void;
@@ -63,6 +63,7 @@ export default function Settings({ onClose }: SettingsProps) {
   const tabs: { id: SettingsTab; icon: typeof Palette; label: string }[] = [
     { id: 'appearance', icon: Palette, label: 'Appearance' },
     { id: 'performance', icon: Zap, label: 'Performance' },
+    { id: 'ai', icon: Sparkles, label: 'AI Endpoints' },
     { id: 'storage', icon: Database, label: 'Storage' },
     { id: 'notifications', icon: Bell, label: 'Notifications' },
     { id: 'security', icon: Shield, label: 'Security' },
@@ -136,6 +137,9 @@ export default function Settings({ onClose }: SettingsProps) {
               )}
               {activeTab === 'notifications' && (
                 <NotificationSettings settings={settings} updateSettings={updateSettings} />
+              )}
+              {activeTab === 'ai' && (
+                <AISettings settings={settings} updateSettings={updateSettings} />
               )}
               {activeTab === 'security' && (
                 <SecuritySettings />
@@ -507,6 +511,204 @@ function SecuritySettings() {
         <p className="text-sm text-muted-foreground">
           ForgeFlow runs entirely locally. No data is sent to external servers.
         </p>
+      </div>
+    </>
+  );
+}
+
+function AISettings({ settings, updateSettings }: SettingsPageProps) {
+  const updateAIService = (provider: keyof AppSettings['aiServices'], field: string, value: any) => {
+    const updatedServices = {
+      ...settings.aiServices,
+      [provider]: {
+        ...settings.aiServices[provider],
+        [field]: value
+      }
+    };
+    updateSettings('aiServices', updatedServices);
+  };
+
+  return (
+    <>
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+          <Sparkles className="w-5 h-5 text-primary" />
+        </div>
+        <div>
+          <h3 className="text-xl font-bold">AI Endpoints</h3>
+          <p className="text-xs text-muted-foreground">Configure your AI providers</p>
+        </div>
+      </div>
+
+      <div className="space-y-6">
+        {/* OpenAI */}
+        <div className="p-4 rounded-xl border border-border bg-muted/20 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-[#10a37f]/20 flex items-center justify-center">
+                <Brain className="w-4 h-4 text-[#10a37f]" />
+              </div>
+              <div>
+                <div className="text-sm font-semibold">OpenAI</div>
+                <div className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Official API</div>
+              </div>
+            </div>
+            <button
+              onClick={() => updateAIService('openai', 'enabled', !settings.aiServices.openai.enabled)}
+              className={cn(
+                'px-3 py-1 rounded-full text-[10px] font-bold uppercase transition-all',
+                settings.aiServices.openai.enabled 
+                  ? 'bg-[#10a37f]/20 text-[#10a37f] border border-[#10a37f]/30' 
+                  : 'bg-muted text-muted-foreground border border-border'
+              )}
+            >
+              {settings.aiServices.openai.enabled ? 'Enabled' : 'Disabled'}
+            </button>
+          </div>
+          
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest ml-1">API Key</label>
+            <input
+              type="password"
+              value={settings.aiServices.openai.apiKey}
+              onChange={(e) => updateAIService('openai', 'apiKey', e.target.value)}
+              placeholder="sk-..."
+              className="w-full px-3 py-2 rounded-lg bg-background border border-border focus:ring-1 focus:ring-primary outline-none text-sm transition-all"
+            />
+          </div>
+        </div>
+
+        {/* Groq */}
+        <div className="p-4 rounded-xl border border-border bg-muted/20 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-[#f55036]/20 flex items-center justify-center text-sm font-bold text-[#f55036]">
+                G
+              </div>
+              <div>
+                <div className="text-sm font-semibold">Groq</div>
+                <div className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">High Speed</div>
+              </div>
+            </div>
+            <button
+              onClick={() => updateAIService('groq', 'enabled', !settings.aiServices.groq.enabled)}
+              className={cn(
+                'px-3 py-1 rounded-full text-[10px] font-bold uppercase transition-all',
+                settings.aiServices.groq.enabled 
+                  ? 'bg-[#f55036]/20 text-[#f55036] border border-[#f55036]/30' 
+                  : 'bg-muted text-muted-foreground border border-border'
+              )}
+            >
+              {settings.aiServices.groq.enabled ? 'Enabled' : 'Disabled'}
+            </button>
+          </div>
+          
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest ml-1">API Key</label>
+            <input
+              type="password"
+              value={settings.aiServices.groq.apiKey}
+              onChange={(e) => updateAIService('groq', 'apiKey', e.target.value)}
+              placeholder="gsk_..."
+              className="w-full px-3 py-2 rounded-lg bg-background border border-border focus:ring-1 focus:ring-primary outline-none text-sm transition-all"
+            />
+          </div>
+        </div>
+
+        {/* OpenRouter */}
+        <div className="p-4 rounded-xl border border-border bg-muted/20 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center">
+                <Globe className="w-4 h-4 text-indigo-400" />
+              </div>
+              <div>
+                <div className="text-sm font-semibold">OpenRouter</div>
+                <div className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Universal access</div>
+              </div>
+            </div>
+            <button
+              onClick={() => updateAIService('openrouter', 'enabled', !settings.aiServices.openrouter.enabled)}
+              className={cn(
+                'px-3 py-1 rounded-full text-[10px] font-bold uppercase transition-all',
+                settings.aiServices.openrouter.enabled 
+                  ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30' 
+                  : 'bg-muted text-muted-foreground border border-border'
+              )}
+            >
+              {settings.aiServices.openrouter.enabled ? 'Enabled' : 'Disabled'}
+            </button>
+          </div>
+          
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest ml-1">API Key</label>
+            <input
+              type="password"
+              value={settings.aiServices.openrouter.apiKey}
+              onChange={(e) => updateAIService('openrouter', 'apiKey', e.target.value)}
+              placeholder="sk-or-v1-..."
+              className="w-full px-3 py-2 rounded-lg bg-background border border-border focus:ring-1 focus:ring-primary outline-none text-sm transition-all"
+            />
+          </div>
+        </div>
+
+        {/* Custom OpenAI Compatible */}
+        <div className="p-4 rounded-xl border border-border bg-muted/20 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                <Code className="w-4 h-4 text-amber-500" />
+              </div>
+              <div>
+                <div className="text-sm font-semibold">Custom OpenAI Compatible</div>
+                <div className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Self-hosted or Alternate</div>
+              </div>
+            </div>
+            <button
+              onClick={() => updateAIService('custom', 'enabled', !settings.aiServices.custom.enabled)}
+              className={cn(
+                'px-3 py-1 rounded-full text-[10px] font-bold uppercase transition-all',
+                settings.aiServices.custom.enabled 
+                  ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30' 
+                  : 'bg-muted text-muted-foreground border border-border'
+              )}
+            >
+              {settings.aiServices.custom.enabled ? 'Enabled' : 'Disabled'}
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest ml-1">Base URL</label>
+              <input
+                type="text"
+                value={settings.aiServices.custom.baseUrl}
+                onChange={(e) => updateAIService('custom', 'baseUrl', e.target.value)}
+                placeholder="https://localhost:8080/v1"
+                className="w-full px-3 py-2 rounded-lg bg-background border border-border focus:ring-1 focus:ring-primary outline-none text-sm transition-all"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest ml-1">API Key</label>
+              <input
+                type="password"
+                value={settings.aiServices.custom.apiKey}
+                onChange={(e) => updateAIService('custom', 'apiKey', e.target.value)}
+                placeholder="optional"
+                className="w-full px-3 py-2 rounded-lg bg-background border border-border focus:ring-1 focus:ring-primary outline-none text-sm transition-all"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Coming Soon providers */}
+        <div className="flex flex-wrap gap-2 pt-2 opacity-50">
+          {['Anthropic', 'Gemini', 'Mistral', 'Perplexity'].map(p => (
+            <div key={p} className="px-3 py-1 rounded-lg border border-border bg-muted/10 text-[10px] font-medium grayscale">
+              {p} (Coming Soon)
+            </div>
+          ))}
+        </div>
       </div>
     </>
   );

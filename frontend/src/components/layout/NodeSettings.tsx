@@ -1,9 +1,10 @@
-import { X, Settings } from "lucide-react";
+import { X, Settings, Info } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { CronField, HotkeyField, FilePickerField } from "@/components/ui/fields";
+import { CronField, HotkeyField, FilePickerField, FolderPickerField } from "@/components/ui/fields";
 import { useFlowStore } from "@/stores/flowStore";
 import { cn } from "@/lib/utils";
 import type { NodeCategory } from "@/types/flow";
+import { getNodeDefinition } from "@/nodes";
 
 const categoryLabels: Record<NodeCategory, string> = {
   trigger: "Trigger",
@@ -13,6 +14,7 @@ const categoryLabels: Record<NodeCategory, string> = {
   output: "Output",
   loop: "Loop",
   utility: "Utility",
+  apps: "App Action",
 };
 
 const categoryColors: Record<NodeCategory, string> = {
@@ -23,6 +25,7 @@ const categoryColors: Record<NodeCategory, string> = {
   output: "text-rose-400 border-rose-500/30",
   loop: "text-violet-400 border-violet-500/30",
   utility: "text-slate-400 border-slate-500/30",
+  apps: "text-teal-400 border-teal-500/30",
 };
 
 interface NodeSettingsProps {
@@ -33,12 +36,19 @@ interface NodeSettingsProps {
 export default function NodeSettings({ selectedNodeId, onClose }: NodeSettingsProps) {
   const { nodes, updateNodeData } = useFlowStore();
   const selectedNode = nodes.find((n) => n.id === selectedNodeId);
-
+  
   if (!selectedNode) return null;
 
   const { data } = selectedNode;
   const config = (data.config || {}) as Record<string, any>;
-  const hasSettings = ["trigger", "action", "ai", "condition"].includes(data.category);
+  const definition = getNodeDefinition(data.nodeType || "");
+  const hasFields = definition && definition.fields && definition.fields.length > 0;
+
+  const handleConfigChange = (key: string, value: any) => {
+    updateNodeData(selectedNode.id, {
+      config: { ...config, [key]: value },
+    });
+  };
 
   return (
     <aside className="w-64 h-full bg-card border-l border-border flex flex-col text-xs">
@@ -54,303 +64,231 @@ export default function NodeSettings({ selectedNodeId, onClose }: NodeSettingsPr
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-3">
+      <div className="flex-1 overflow-y-auto p-3 space-y-4">
         {/* Node Info */}
-        <div>
-          <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-            Type
-          </label>
-          <div className={cn("mt-1 px-2 py-1.5 rounded border bg-background/50 text-xs", categoryColors[data.category])}>
-            <span className="font-medium">{categoryLabels[data.category]}</span>
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+              Type
+            </label>
+            <span className="text-[10px] text-muted-foreground/50 font-mono">
+              {data.nodeType}
+            </span>
+          </div>
+          <div className={cn("px-2 py-1.5 rounded-md border bg-background/50 text-xs flex items-center gap-2", categoryColors[data.category])}>
+            <span className="text-sm">{data.icon}</span>
+            <span className="font-semibold">{categoryLabels[data.category]}</span>
           </div>
         </div>
 
         {/* Node Label */}
-        <div>
-          <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+        <div className="space-y-1.5">
+          <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
             Label
           </label>
           <input
             type="text"
             value={data.label}
             onChange={(e) => updateNodeData(selectedNode.id, { label: e.target.value })}
-            className="mt-1 w-full px-2 py-1.5 rounded border border-border bg-background text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full px-2.5 py-1.5 rounded-md border border-border bg-background text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all"
           />
         </div>
 
         {/* Description */}
-        <div>
-          <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+        <div className="space-y-1.5">
+          <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
             Description
           </label>
           <textarea
             value={data.description || ""}
             onChange={(e) => updateNodeData(selectedNode.id, { description: e.target.value })}
             rows={2}
-            className="mt-1 w-full px-2 py-1.5 rounded border border-border bg-background text-xs focus:outline-none focus:ring-1 focus:ring-primary resize-none"
-            placeholder="Optional..."
+            className="w-full px-2.5 py-1.5 rounded-md border border-border bg-background text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 resize-none transition-all"
+            placeholder="Node purpose..."
           />
         </div>
 
-        {/* Category-specific settings */}
-        {hasSettings && (
-          <>
-            <div className="pt-2 border-t border-border">
-              <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                Configuration
-              </h3>
+        {/* Dynamic Configuration */}
+        <div className="pt-3 border-t border-border space-y-3">
+          <div className="flex items-center gap-1.5 mb-3">
+            <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+              Configuration
+            </h3>
+            {definition?.description && (
+              <div title={definition.description} className="cursor-help text-muted-foreground/50 hover:text-muted-foreground transition-colors">
+                <Info className="w-3 h-3" />
+              </div>
+            )}
+          </div>
 
-              {/* Trigger Settings */}
-              {data.category === "trigger" && (
-                <div className="space-y-2.5">
-                  {data.icon === "file" && (
-                    <>
-                      <div>
-                        <label className="text-[10px] font-medium text-muted-foreground">Watch Path</label>
-                        <div className="mt-1">
-                          <FilePickerField
-                            value={String(config.watchPath || "")}
-                            onChange={(value) => updateNodeData(selectedNode.id, { config: { ...config, watchPath: value } })}
-                            placeholder="/path/to/watch"
-                            mode="open"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-medium text-muted-foreground">File Pattern</label>
-                        <input
-                          type="text"
-                          value={String(config.filePattern || "")}
-                          onChange={(e) => updateNodeData(selectedNode.id, { config: { ...config, filePattern: e.target.value } })}
-                          placeholder="*.txt"
-                          className="mt-1 w-full px-2 py-1.5 rounded border border-border bg-background text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-                        />
-                      </div>
-                    </>
-                  )}
-                  {data.icon === "time" && (
-                    <div>
-                      <label className="text-[10px] font-medium text-muted-foreground">Cron Expression</label>
-                      <div className="mt-1">
-                        <CronField
-                          value={String(config.cron || "")}
-                          onChange={(value) => updateNodeData(selectedNode.id, { config: { ...config, cron: value } })}
-                          placeholder="0 */5 * * * *"
-                        />
-                      </div>
-                    </div>
-                  )}
-                  {data.icon === "http" && (
-                    <>
-                      <div>
-                        <label className="text-[10px] font-medium text-muted-foreground">Endpoint Path</label>
-                        <input
-                          type="text"
-                          value={String(config.endpoint || "")}
-                          onChange={(e) => updateNodeData(selectedNode.id, { config: { ...config, endpoint: e.target.value } })}
-                          placeholder="/webhook"
-                          className="mt-1 w-full px-2 py-1.5 rounded border border-border bg-background text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-medium text-muted-foreground">Method</label>
-                        <select 
-                          value={String(config.method || "POST")}
-                          onChange={(e) => updateNodeData(selectedNode.id, { config: { ...config, method: e.target.value } })}
-                          className="mt-1 w-full px-2 py-1.5 rounded border border-border bg-background text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-                        >
-                          <option>POST</option>
-                          <option>GET</option>
-                          <option>PUT</option>
-                          <option>DELETE</option>
-                        </select>
-                      </div>
-                    </>
-                  )}
-                  {data.icon === "keyboard" && (
-                    <div>
-                      <label className="text-[10px] font-medium text-muted-foreground">Hotkey</label>
-                      <div className="mt-1">
-                        <HotkeyField
-                          value={String(config.hotkey || "")}
-                          onChange={(value) => updateNodeData(selectedNode.id, { config: { ...config, hotkey: value } })}
-                          placeholder="Click to record..."
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+          {hasFields ? (
+            <div className="space-y-3.5">
+              {definition.fields.map((field) => (
+                <div key={field.key} className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-medium text-muted-foreground">
+                      {field.label}
+                      {field.required && <span className="text-rose-500 ml-0.5">*</span>}
+                    </label>
+                  </div>
 
-              {/* Action Settings */}
-              {data.category === "action" && (
-                <div className="space-y-2.5">
-                  {data.icon === "api" && (
-                    <>
-                      <div>
-                        <label className="text-[10px] font-medium text-muted-foreground">URL</label>
-                        <input
-                          type="text"
-                          value={String(config.url || "")}
-                          onChange={(e) => updateNodeData(selectedNode.id, { config: { ...config, url: e.target.value } })}
-                          placeholder="https://api.example.com"
-                          className="mt-1 w-full px-2 py-1.5 rounded border border-border bg-background text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-medium text-muted-foreground">Method</label>
-                        <select 
-                          value={String(config.method || "GET")}
-                          onChange={(e) => updateNodeData(selectedNode.id, { config: { ...config, method: e.target.value } })}
-                          className="mt-1 w-full px-2 py-1.5 rounded border border-border bg-background text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-                        >
-                          <option>GET</option>
-                          <option>POST</option>
-                          <option>PUT</option>
-                          <option>DELETE</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-medium text-muted-foreground">Headers (JSON)</label>
-                        <textarea
-                          value={String(config.headers || "{}")}
-                          onChange={(e) => updateNodeData(selectedNode.id, { config: { ...config, headers: e.target.value } })}
-                          rows={2}
-                          placeholder='{"Content-Type": "application/json"}'
-                          className="mt-1 w-full px-2 py-1.5 rounded border border-border bg-background text-xs focus:outline-none focus:ring-1 focus:ring-primary resize-none font-mono"
-                        />
-                      </div>
-                    </>
-                  )}
-                  {data.icon === "shell" && (
-                    <div>
-                      <label className="text-[10px] font-medium text-muted-foreground">Command</label>
-                      <textarea
-                        value={String(config.command || "")}
-                        onChange={(e) => updateNodeData(selectedNode.id, { config: { ...config, command: e.target.value } })}
-                        rows={2}
-                        placeholder="echo 'Hello World'"
-                        className="mt-1 w-full px-2 py-1.5 rounded border border-border bg-background text-xs focus:outline-none focus:ring-1 focus:ring-primary resize-none font-mono"
-                      />
-                    </div>
-                  )}
-                  {data.icon === "fileOps" && (
-                    <>
-                      <div>
-                        <label className="text-[10px] font-medium text-muted-foreground">Operation</label>
-                        <select 
-                          value={String(config.operation || "move")}
-                          onChange={(e) => updateNodeData(selectedNode.id, { config: { ...config, operation: e.target.value } })}
-                          className="mt-1 w-full px-2 py-1.5 rounded border border-border bg-background text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-                        >
-                          <option value="move">Move</option>
-                          <option value="copy">Copy</option>
-                          <option value="delete">Delete</option>
-                          <option value="rename">Rename</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-medium text-muted-foreground">Target Path</label>
-                        <div className="mt-1">
-                          <FilePickerField
-                            value={String(config.targetPath || "")}
-                            onChange={(value) => updateNodeData(selectedNode.id, { config: { ...config, targetPath: value } })}
-                            placeholder="/path/to/target"
-                            mode="save"
-                          />
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-
-              {/* AI Settings */}
-              {data.category === "ai" && (
-                <div className="space-y-2.5">
-                  <div>
-                    <label className="text-[10px] font-medium text-muted-foreground">Model</label>
-                    <select 
-                      value={String(config.model || "gpt-4")}
-                      onChange={(e) => updateNodeData(selectedNode.id, { config: { ...config, model: e.target.value } })}
-                      className="mt-1 w-full px-2 py-1.5 rounded border border-border bg-background text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-                    >
-                      <option value="gpt-4">GPT-4</option>
-                      <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                      <option value="claude-3">Claude 3</option>
-                      <option value="local">Local LLM</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-medium text-muted-foreground">Prompt</label>
-                    <textarea
-                      value={String(config.prompt || "")}
-                      onChange={(e) => updateNodeData(selectedNode.id, { config: { ...config, prompt: e.target.value } })}
-                      rows={3}
-                      placeholder="Enter your prompt..."
-                      className="mt-1 w-full px-2 py-1.5 rounded border border-border bg-background text-xs focus:outline-none focus:ring-1 focus:ring-primary resize-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-medium text-muted-foreground">Temperature: {Number(config.temperature || 0.7).toFixed(1)}</label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="1"
-                      step="0.1"
-                      value={Number(config.temperature || 0.7)}
-                      onChange={(e) => updateNodeData(selectedNode.id, { config: { ...config, temperature: parseFloat(e.target.value) } })}
-                      className="mt-1 w-full h-1"
-                    />
-                    <div className="flex justify-between text-[9px] text-muted-foreground mt-0.5">
-                      <span>Precise</span>
-                      <span>Creative</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Condition Settings */}
-              {data.category === "condition" && (
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground">Condition Type</label>
-                    <select 
-                      value={String(config.conditionType || "equals")}
-                      onChange={(e) => updateNodeData(selectedNode.id, { config: { ...config, conditionType: e.target.value } })}
-                      className="mt-1 w-full px-3 py-2 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                    >
-                      <option value="equals">Equals</option>
-                      <option value="contains">Contains</option>
-                      <option value="greater">Greater Than</option>
-                      <option value="less">Less Than</option>
-                      <option value="regex">Regex Match</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground">Value</label>
+                  {field.type === "text" && (
                     <input
                       type="text"
-                      value={String(config.value || "")}
-                      onChange={(e) => updateNodeData(selectedNode.id, { config: { ...config, value: e.target.value } })}
-                      placeholder="Comparison value"
-                      className="mt-1 w-full px-3 py-2 rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      value={String(config[field.key] ?? "")}
+                      onChange={(e) => handleConfigChange(field.key, e.target.value)}
+                      placeholder={field.placeholder}
+                      className="w-full px-2.5 py-1.5 rounded-md border border-border bg-background text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all"
                     />
-                  </div>
-                </div>
-              )}
-            </div>
-          </>
-        )}
+                  )}
 
-        {/* No settings message */}
-        {!hasSettings && (
-          <div className="pt-2 border-t border-border">
-            <p className="text-[10px] text-muted-foreground text-center py-3">
-              No additional settings
-            </p>
-          </div>
-        )}
+                  {field.type === "textarea" && (
+                    <textarea
+                      value={String(config[field.key] ?? "")}
+                      onChange={(e) => handleConfigChange(field.key, e.target.value)}
+                      placeholder={field.placeholder}
+                      rows={3}
+                      className="w-full px-2.5 py-1.5 rounded-md border border-border bg-background text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 resize-vertical transition-all font-mono"
+                    />
+                  )}
+
+                  {field.type === "number" && (
+                    <input
+                      type="number"
+                      value={Number(config[field.key] ?? 0)}
+                      onChange={(e) => handleConfigChange(field.key, parseFloat(e.target.value))}
+                      placeholder={field.placeholder}
+                      className="w-full px-2.5 py-1.5 rounded-md border border-border bg-background text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all"
+                    />
+                  )}
+
+                  {field.type === "password" && (
+                    <input
+                      type="password"
+                      value={String(config[field.key] ?? "")}
+                      onChange={(e) => handleConfigChange(field.key, e.target.value)}
+                      placeholder={field.placeholder}
+                      className="w-full px-2.5 py-1.5 rounded-md border border-border bg-background text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all"
+                    />
+                  )}
+
+                  {field.type === "select" && (
+                    <select
+                      value={String(config[field.key] ?? "")}
+                      onChange={(e) => handleConfigChange(field.key, e.target.value)}
+                      className="w-full px-2 py-1.5 rounded-md border border-border bg-background text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all"
+                    >
+                      {field.options?.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+
+                  {field.type === "boolean" && (
+                    <label className="flex items-center gap-2 cursor-pointer group">
+                      <div className="relative inline-flex h-4 w-7 items-center rounded-full bg-border group-hover:bg-border/80 transition-colors">
+                        <input
+                          type="checkbox"
+                          className="sr-only p-0"
+                          checked={!!config[field.key]}
+                          onChange={(e) => handleConfigChange(field.key, e.target.checked)}
+                        />
+                        <span
+                          className={cn(
+                            "inline-block h-3 w-3 translate-x-0.5 rounded-full bg-white transition-transform",
+                            config[field.key] ? "translate-x-3.5 bg-primary" : "translate-x-0.5"
+                          )}
+                        />
+                      </div>
+                      <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">
+                        Enabled
+                      </span>
+                    </label>
+                  )}
+
+                  {field.type === "cron" && (
+                    <CronField
+                      value={String(config[field.key] ?? "")}
+                      onChange={(value) => handleConfigChange(field.key, value)}
+                      placeholder={field.placeholder}
+                    />
+                  )}
+
+                  {field.type === "hotkey" && (
+                    <HotkeyField
+                      value={String(config[field.key] ?? "")}
+                      onChange={(value) => handleConfigChange(field.key, value)}
+                      placeholder={field.placeholder}
+                    />
+                  )}
+
+                  {field.type === "file" && (
+                    <FilePickerField
+                      value={String(config[field.key] ?? "")}
+                      onChange={(value) => handleConfigChange(field.key, value)}
+                      placeholder={field.placeholder}
+                      mode="open"
+                    />
+                  )}
+                  
+                  {field.type === "file-save" && (
+                    <FilePickerField
+                      value={String(config[field.key] ?? "")}
+                      onChange={(value) => handleConfigChange(field.key, value)}
+                      placeholder={field.placeholder}
+                      mode="save"
+                    />
+                  )}
+
+                  {field.type === "folder" && (
+                    <FolderPickerField
+                      value={String(config[field.key] ?? "")}
+                      onChange={(value) => handleConfigChange(field.key, value)}
+                      placeholder={field.placeholder}
+                    />
+                  )}
+
+                  {field.type === "model-select" && (
+                    <div className="space-y-1.5">
+                      <input
+                        type="text"
+                        value={String(config[field.key] ?? "")}
+                        onChange={(e) => handleConfigChange(field.key, e.target.value)}
+                        placeholder={config.provider === 'groq' ? 'llama3-8b-8192' : config.provider === 'openrouter' ? 'google/gemini-flash-1.5' : 'gpt-4o-mini'}
+                        className="w-full px-2.5 py-1.5 rounded-md border border-border bg-background text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all"
+                      />
+                      <div className="flex flex-wrap gap-1">
+                        {(config.provider === 'groq' 
+                          ? ['llama3-8b-8192', 'llama3-70b-8192', 'mixtral-8x7b-32768', 'gemma-7b-it'] 
+                          : config.provider === 'openrouter'
+                          ? ['google/gemini-flash-1.5', 'anthropic/claude-3.5-sonnet', 'meta-llama/llama-3-70b-instruct']
+                          : ['gpt-4o-mini', 'gpt-4o', 'gpt-3.5-turbo']
+                        ).map(m => (
+                          <button 
+                            key={m}
+                            type="button"
+                            onClick={() => handleConfigChange(field.key, m)}
+                            className="px-1.5 py-0.5 rounded bg-muted/50 hover:bg-muted text-[9px] text-muted-foreground border border-border transition-colors"
+                          >
+                            {m.split('/').pop()}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-6 text-center space-y-1 bg-muted/20 rounded-lg border border-dashed border-border">
+              <span className="text-[10px] text-muted-foreground/60 italic font-medium">
+                No configuration required
+              </span>
+            </div>
+          )}
+        </div>
       </div>
     </aside>
   );

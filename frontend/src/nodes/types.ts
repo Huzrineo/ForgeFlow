@@ -1,5 +1,5 @@
 // Node type definitions
-export type NodeCategory = 'trigger' | 'action' | 'condition' | 'ai' | 'output' | 'loop' | 'utility';
+export type NodeCategory = 'trigger' | 'action' | 'condition' | 'ai' | 'output' | 'loop' | 'utility' | 'apps';
 
 export type NodeFieldType = 
   | 'text' 

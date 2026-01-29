@@ -26,6 +26,7 @@ const categoryColors: Record<NodeCategory, string> = {
   utility: "#6366f1", // indigo-500
   ai: "#a855f7", // purple-500
   output: "#ec4899", // pink-500
+  apps: "#0d9488", // teal-600
 };
 
 function FlowNode({ data, selected }: FlowNodeProps) {
@@ -99,7 +100,7 @@ function FlowNode({ data, selected }: FlowNodeProps) {
     );
   }
 
-  // Card-style UI for all other nodes (actions, conditions, loops, utilities, AI)
+  // Card-style UI for all other nodes (actions, conditions, loops, utilities, AI, apps)
   const cardBg =
     data.category === "condition"
       ? "bg-amber-950/30"
@@ -109,6 +110,8 @@ function FlowNode({ data, selected }: FlowNodeProps) {
       ? "bg-violet-950/30"
       : data.category === "utility"
       ? "bg-indigo-950/30"
+      : data.category === "apps"
+      ? "bg-teal-950/30"
       : "bg-blue-950/30";
 
   const cardBorder =
@@ -120,6 +123,8 @@ function FlowNode({ data, selected }: FlowNodeProps) {
       ? "border-violet-500/30"
       : data.category === "utility"
       ? "border-indigo-500/30"
+      : data.category === "apps"
+      ? "border-teal-500/30"
       : "border-blue-500/30";
 
   const glowColor =
@@ -131,6 +136,8 @@ function FlowNode({ data, selected }: FlowNodeProps) {
       ? "shadow-violet-500/40"
       : data.category === "utility"
       ? "shadow-indigo-500/40"
+      : data.category === "apps"
+      ? "shadow-teal-500/40"
       : "shadow-blue-500/40";
 
   return (
