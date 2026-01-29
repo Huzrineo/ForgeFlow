@@ -25,7 +25,6 @@ const categoryColors: Record<NodeCategory, string> = {
   loop: "#8b5cf6", // violet-500
   utility: "#6366f1", // indigo-500
   ai: "#a855f7", // purple-500
-  output: "#ec4899", // pink-500
   apps: "#0d9488", // teal-600
 };
 
@@ -35,8 +34,8 @@ function FlowNode({ data, selected }: FlowNodeProps) {
   const isError = data.status === "error";
   const categoryColor = categoryColors[data.category] || categoryColors.action;
 
-  // Simple square UI for triggers and outputs
-  if (data.category === "trigger" || data.category === "output") {
+  // Simple square UI for triggers only
+  if (data.category === "trigger") {
     return (
       <div className="flex flex-col items-center gap-1">
         {/* Label above */}
@@ -71,30 +70,15 @@ function FlowNode({ data, selected }: FlowNodeProps) {
           )}
 
           {/* Output port for triggers */}
-          {data.category === "trigger" && (
-            <Handle
-              type="source"
-              position={Position.Right}
-              className="!w-2 !h-2 !-right-1 !border-2"
-              style={{
-                backgroundColor: "#166534",
-                borderColor: categoryColor,
-              }}
-            />
-          )}
-
-          {/* Input port for outputs */}
-          {data.category === "output" && (
-            <Handle
-              type="target"
-              position={Position.Left}
-              className="!w-2 !h-2 !-left-1 !border-2"
-              style={{
-                backgroundColor: "rgba(255,255,255,0.8)",
-                borderColor: categoryColor,
-              }}
-            />
-          )}
+          <Handle
+            type="source"
+            position={Position.Right}
+            className="!w-2 !h-2 !-right-1 !border-2"
+            style={{
+              backgroundColor: "#166534",
+              borderColor: categoryColor,
+            }}
+          />
         </div>
       </div>
     );

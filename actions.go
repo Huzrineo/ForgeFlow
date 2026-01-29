@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"syscall"
 	"time"
 )
 
@@ -366,7 +367,8 @@ func (as *ActionService) ShowNotification(title, message string) error {
 		[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("ForgeFlow").Show($toast)
 	`, title, message)
 
-	cmd := exec.Command("powershell", "-Command", script)
+	cmd := exec.Command("powershell", "-WindowStyle", "Hidden", "-Command", script)
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	return cmd.Run()
 }
 
