@@ -41,9 +41,9 @@ interface FlowState {
   updateNodeData: (nodeId: string, data: Partial<NodeData>) => void;
   setNodes: (nodes: FlowNode[]) => void;
   setEdges: (edges: FlowEdge[]) => void;
-  saveFlow: (name: string, description?: string) => void;
+  saveFlow: (name: string, description?: string) => void | Promise<void>;
   loadFlow: (flowId: string) => void;
-  deleteFlow: (flowId: string) => void;
+  deleteFlow: (flowId: string) => void | Promise<void>;
   toggleDarkMode: () => void;
   toggleSidebar: () => void;
   clearCanvas: () => void;
@@ -226,11 +226,14 @@ export const useFlowStore = create<FlowState>()(
       setNodes: (nodes) => set({ nodes }),
       setEdges: (edges) => set({ edges }),
 
-      saveFlow: (name, description) => {
+      saveFlow: async (name, description) => {
         const { nodes, edges, flows, activeFlowId } = get();
         const now = new Date().toISOString();
 
+        let flowId: string;
+
         if (activeFlowId) {
+          flowId = activeFlowId;
           set({
             flows: flows.map((f) =>
               f.id === activeFlowId
@@ -239,8 +242,9 @@ export const useFlowStore = create<FlowState>()(
             ),
           });
         } else {
+          flowId = crypto.randomUUID();
           const newFlow: Flow = {
-            id: crypto.randomUUID(),
+            id: flowId,
             name,
             description,
             nodes,
@@ -249,7 +253,15 @@ export const useFlowStore = create<FlowState>()(
             updatedAt: now,
             enabled: false,
           };
-          set({ flows: [...flows, newFlow], activeFlowId: newFlow.id });
+          set({ flows: [...flows, newFlow], activeFlowId: flowId });
+        }
+
+        // Register triggers with backend
+        try {
+          const { TriggerService } = await import('@/services/triggerService');
+          await TriggerService.registerWorkflowTriggers(flowId, nodes);
+        } catch (error) {
+          console.error('Failed to register triggers:', error);
         }
       },
 
@@ -264,8 +276,20 @@ export const useFlowStore = create<FlowState>()(
         }
       },
 
-      deleteFlow: (flowId) => {
+      deleteFlow: async (flowId) => {
         const { flows, activeFlowId } = get();
+        
+        // Unregister triggers before deleting
+        const flow = flows.find(f => f.id === flowId);
+        if (flow) {
+          try {
+            const { TriggerService } = await import('@/services/triggerService');
+            await TriggerService.unregisterWorkflowTriggers(flowId, flow.nodes);
+          } catch (error) {
+            console.error('Failed to unregister triggers:', error);
+          }
+        }
+        
         set({
           flows: flows.filter((f) => f.id !== flowId),
           ...(activeFlowId === flowId && { nodes: [], edges: [], activeFlowId: null }),
