@@ -4,7 +4,6 @@ import { triggerHandlers } from './triggers';
 import { actionHandlers } from './actions';
 import { conditionHandlers } from './conditions';
 import { aiHandlers } from './ai';
-import { outputHandlers } from './outputs';
 import { loopHandlers } from './loops';
 import { utilityHandlers } from './utilities';
 import { appHandlers } from './apps';
@@ -17,7 +16,6 @@ export const nodeHandlers: Record<string, (ctx: HandlerContext) => Promise<any>>
   ...actionHandlers,
   ...conditionHandlers,
   ...aiHandlers,
-  ...outputHandlers,
   ...loopHandlers,
   ...utilityHandlers,
   ...appHandlers,

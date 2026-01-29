@@ -3,7 +3,6 @@ import { triggerNodes } from './triggers';
 import { actionNodes } from './actions';
 import { conditionNodes } from './conditions';
 import { aiNodes } from './ai';
-import { outputNodes } from './outputs';
 import { loopNodes } from './loops';
 import { utilityNodes } from './utilities';
 import { appNodes } from './apps';
@@ -15,7 +14,6 @@ export const nodeDefinitions: NodeDefinition[] = [
   ...actionNodes,
   ...conditionNodes,
   ...aiNodes,
-  ...outputNodes,
   ...loopNodes,
   ...utilityNodes,
   ...appNodes,
@@ -35,7 +33,6 @@ export * from './triggers';
 export * from './actions';
 export * from './conditions';
 export * from './ai';
-export * from './outputs';
 export * from './loops';
 export * from './utilities';
 export * from './apps';

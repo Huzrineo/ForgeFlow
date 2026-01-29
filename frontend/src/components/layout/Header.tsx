@@ -70,10 +70,12 @@ export default function Header() {
       data-wails-drag
     >
       {/* Left Section */}
-      <div className="flex items-center gap-2 flex-1" style={{ "--wails-draggable": "no-drag" } as React.CSSProperties} data-wails-no-drag>
-        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={toggleSidebar} title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}>
-          {sidebarCollapsed ? <PanelLeft className="w-3.5 h-3.5" /> : <PanelLeftClose className="w-3.5 h-3.5" />}
-        </Button>
+      <div className="flex items-center gap-2 flex-1">
+        <div style={{ "--wails-draggable": "no-drag" } as React.CSSProperties} data-wails-no-drag>
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={toggleSidebar} title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}>
+            {sidebarCollapsed ? <PanelLeft className="w-3.5 h-3.5" /> : <PanelLeftClose className="w-3.5 h-3.5" />}
+          </Button>
+        </div>
 
         <div className="flex items-center gap-1.5">
           <div className="w-5 h-5 rounded bg-primary flex items-center justify-center">
