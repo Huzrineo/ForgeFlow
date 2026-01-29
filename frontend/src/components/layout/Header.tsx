@@ -24,7 +24,6 @@ export default function Header() {
   const {
     sidebarCollapsed,
     toggleSidebar,
-    saveFlow,
     clearCanvas,
     nodes,
     activeFlowId,
@@ -33,14 +32,14 @@ export default function Header() {
     runFlow,
     stopFlow,
     setSettingsOpen,
+    setSaveDialogOpen,
   } = useFlowStore();
   const { setWorkflowPanelOpen, setTemplateModalOpen, setExecutionHistoryOpen, setImportExportOpen } = useWorkflowStore();
 
   const activeFlow = flows.find((f) => f.id === activeFlowId);
 
   const handleSave = () => {
-    const name = activeFlow?.name || prompt("Enter flow name:", "New Flow");
-    if (name) saveFlow(name);
+    setSaveDialogOpen(true);
   };
 
   const handleRun = async () => {

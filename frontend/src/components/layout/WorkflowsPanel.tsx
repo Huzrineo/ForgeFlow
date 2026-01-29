@@ -42,25 +42,43 @@ export default function WorkflowsPanel() {
     setTemplateModalOpen(true);
   };
 
-  const handleLoadFlow = (flowId: string) => {
-    loadFlow(flowId);
-    setWorkflowPanelOpen(false);
+  const handleLoadFlow = async (flowId: string) => {
+    try {
+      await loadFlow(flowId);
+      setWorkflowPanelOpen(false);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Failed to load flow';
+      alert(`Error: ${errorMsg}`);
+    }
   };
 
-  const handleDeleteFlow = (flow: Flow) => {
-    confirm({
+  const handleDeleteFlow = async (flow: Flow) => {
+    const confirmed = await confirm({
       title: 'Delete Workflow',
       message: `Are you sure you want to delete "${flow.name}"? This cannot be undone.`,
       confirmText: 'Delete',
       cancelText: 'Cancel',
       variant: 'danger',
-      onConfirm: () => deleteFlow(flow.id),
     });
+
+    if (confirmed) {
+      try {
+        await deleteFlow(flow.id);
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : 'Failed to delete flow';
+        alert(`Error: ${errorMsg}`);
+      }
+    }
   };
 
-  const handleDuplicateFlow = (flow: Flow) => {
-    loadFlow(flow.id);
-    saveFlow(`${flow.name} (Copy)`, flow.description);
+  const handleDuplicateFlow = async (flow: Flow) => {
+    try {
+      await loadFlow(flow.id);
+      await saveFlow(`${flow.name} (Copy)`, flow.description);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Failed to duplicate flow';
+      alert(`Error: ${errorMsg}`);
+    }
   };
 
   const handleContextMenu = (e: React.MouseEvent, flow: Flow) => {
@@ -81,11 +99,16 @@ export default function WorkflowsPanel() {
         id: 'rename',
         label: 'Rename',
         icon: <Edit2 className="w-4 h-4" />,
-        onClick: () => {
+        onClick: async () => {
           const newName = prompt('Enter new name:', flow.name);
           if (newName && newName !== flow.name) {
-            loadFlow(flow.id);
-            saveFlow(newName, flow.description);
+            try {
+              await loadFlow(flow.id);
+              await saveFlow(newName, flow.description);
+            } catch (error) {
+              const errorMsg = error instanceof Error ? error.message : 'Failed to rename flow';
+              alert(`Error: ${errorMsg}`);
+            }
           }
         },
       },
@@ -204,7 +227,7 @@ export default function WorkflowsPanel() {
                       )}
                     </div>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span>{flow.nodes.length} nodes</span>
+                      <span>{flow.nodeCount ?? flow.nodes.length} nodes</span>
                       <span>•</span>
                       <span>{new Date(flow.updatedAt).toLocaleDateString()}</span>
                     </div>

@@ -1,10 +1,9 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 import type { OnNodesChange, OnEdgesChange, OnConnect } from "@xyflow/react";
 import { applyNodeChanges, applyEdgeChanges, addEdge } from "@xyflow/react";
 import type { NodeData, FlowNode, FlowEdge, Flow } from "@/types/flow";
 import { RunFlow, StopExecution } from "../../wailsjs/go/main/Engine";
-import { SaveExecution } from "../../wailsjs/go/main/Storage";
+import { SaveFlow, LoadFlow, ListFlows, DeleteFlow, SaveExecution } from "../../wailsjs/go/main/Storage";
 import { WorkflowExecutor } from "@/executor/WorkflowExecutor";
 import type { NodeResult } from "@/executor/WorkflowExecutor";
 import type { LogLevel } from "@/handlers/types";
@@ -32,6 +31,9 @@ interface FlowState {
   historyIndex: number;
   clipboard: FlowNode | null;
   maxHistorySize: number;
+  isLoadingFlows: boolean;
+  saveDialogOpen: boolean;
+  setSaveDialogOpen: (open: boolean) => void;
 
   onNodesChange: OnNodesChange<FlowNode>;
   onEdgesChange: OnEdgesChange<FlowEdge>;
@@ -42,9 +44,10 @@ interface FlowState {
   updateNodeData: (nodeId: string, data: Partial<NodeData>) => void;
   setNodes: (nodes: FlowNode[]) => void;
   setEdges: (edges: FlowEdge[]) => void;
-  saveFlow: (name: string, description?: string) => void | Promise<void>;
-  loadFlow: (flowId: string) => void;
-  deleteFlow: (flowId: string) => void | Promise<void>;
+  saveFlow: (name: string, description?: string) => Promise<void>;
+  loadFlow: (flowId: string) => Promise<void>;
+  loadFlows: () => Promise<void>;
+  deleteFlow: (flowId: string) => Promise<void>;
   toggleDarkMode: () => void;
   toggleSidebar: () => void;
   clearCanvas: () => void;
@@ -65,26 +68,28 @@ interface FlowState {
   duplicateNode: (nodeId: string) => void;
 }
 
-export const useFlowStore = create<FlowState>()(
-  persist(
-    (set, get) => ({
-      nodes: [],
-      edges: [],
-      flows: [],
-      activeFlowId: null,
-      isDarkMode: true,
-      sidebarCollapsed: false,
-      isRunning: false,
-      executionId: null,
-      executor: null,
-      selectedNodeId: null,
-      settingsOpen: false,
-      theme: "vscode",
-      logs: [],
-      history: [],
-      historyIndex: -1,
-      clipboard: null,
-      maxHistorySize: 50,
+export const useFlowStore = create<FlowState>()((set, get) => ({
+  nodes: [],
+  edges: [],
+  flows: [],
+  activeFlowId: null,
+  isDarkMode: true,
+  sidebarCollapsed: false,
+  isRunning: false,
+  executionId: null,
+  executor: null,
+  selectedNodeId: null,
+  settingsOpen: false,
+  theme: "vscode",
+  logs: [],
+  history: [],
+  historyIndex: -1,
+  clipboard: null,
+  maxHistorySize: 50,
+  isLoadingFlows: false,
+  saveDialogOpen: false,
+  
+  setSaveDialogOpen: (open) => set({ saveDialogOpen: open }),
 
       pushHistory: () => {
         const { nodes, edges, history, historyIndex, maxHistorySize } = get();
@@ -228,62 +233,165 @@ export const useFlowStore = create<FlowState>()(
       setNodes: (nodes) => set({ nodes }),
       setEdges: (edges) => set({ edges }),
 
-      saveFlow: async (name, description) => {
-        const { nodes, edges, flows, activeFlowId } = get();
-        const now = new Date().toISOString();
-
-        let flowId: string;
-
-        if (activeFlowId) {
-          flowId = activeFlowId;
-          set({
-            flows: flows.map((f) =>
-              f.id === activeFlowId
-                ? { ...f, name, description, nodes, edges, updatedAt: now }
-                : f
-            ),
-          });
-        } else {
-          flowId = crypto.randomUUID();
-          const newFlow: Flow = {
-            id: flowId,
-            name,
-            description,
-            nodes,
-            edges,
-            createdAt: now,
-            updatedAt: now,
-            enabled: false,
-          };
-          set({ flows: [...flows, newFlow], activeFlowId: flowId });
-        }
-
-        // Register triggers with backend
+      loadFlows: async () => {
+        set({ isLoadingFlows: true });
         try {
-          const { TriggerService } = await import('@/services/triggerService');
-          await TriggerService.registerWorkflowTriggers(flowId, nodes);
+          const flowsData = await ListFlows();
+          
+          // Handle null or undefined response
+          if (!flowsData || !Array.isArray(flowsData)) {
+            set({ flows: [] });
+            return;
+          }
+          
+          const flows: Flow[] = flowsData.map((f: any) => ({
+            id: f.id,
+            name: f.name,
+            description: f.description || '',
+            nodes: [], // Empty for list view
+            edges: [],
+            enabled: f.enabled || false,
+            createdAt: f.createdAt,
+            updatedAt: f.updatedAt,
+            nodeCount: f.nodeCount || 0, // Add nodeCount from backend
+          }));
+          set({ flows });
         } catch (error) {
-          console.error('Failed to register triggers:', error);
+          console.error('Failed to load flows:', error);
+          set({ flows: [] });
+        } finally {
+          set({ isLoadingFlows: false });
         }
       },
 
-      loadFlow: (flowId) => {
-        const flow = get().flows.find((f) => f.id === flowId);
-        if (flow) {
+      saveFlow: async (name, description) => {
+        const { nodes, edges, flows, activeFlowId, addLog } = get();
+        const now = new Date().toISOString();
+
+        if (!name || name.trim() === '') {
+          addLog('❌ Flow name is required');
+          throw new Error('Flow name is required');
+        }
+
+        console.log('Saving nodes:', nodes); // DEBUG
+
+        // Properly serialize nodes with all data - React Flow nodes have data property
+        const serializedNodes: FlowNode[] = nodes.map(n => ({
+          id: n.id,
+          type: n.type,
+          position: n.position,
+          data: {
+            label: n.data.label,
+            category: n.data.category,
+            icon: n.data.icon,
+            description: n.data.description,
+            nodeType: n.data.nodeType,
+            config: n.data.config,
+            status: n.data.status || 'idle',
+          },
+        }));
+
+        console.log('Serialized nodes:', serializedNodes); // DEBUG
+
+        // Ensure edges are properly serialized
+        const serializedEdges = edges.map(e => ({
+          id: e.id,
+          source: e.source,
+          target: e.target,
+          sourceHandle: e.sourceHandle || null,
+          targetHandle: e.targetHandle || null,
+          type: e.type || 'smoothstep',
+          animated: e.animated !== undefined ? e.animated : true,
+        }));
+
+        const flowData: Flow = {
+          id: activeFlowId || '',
+          name: name.trim(),
+          description: description?.trim() || '',
+          nodes: serializedNodes,
+          edges: serializedEdges,
+          createdAt: activeFlowId ? (flows.find(f => f.id === activeFlowId)?.createdAt || now) : now,
+          updatedAt: now,
+          enabled: false,
+        };
+
+        console.log('Flow data to save:', JSON.stringify(flowData, null, 2)); // DEBUG
+
+        try {
+          addLog(`💾 Saving flow: ${name}`);
+          
+          // Save to backend
+          const flowId = await SaveFlow(JSON.stringify(flowData));
+          
+          addLog(`✅ Flow saved successfully`);
+          
+          // Update local state with full node data
+          if (activeFlowId) {
+            set({
+              flows: flows.map((f) =>
+                f.id === activeFlowId
+                  ? { ...f, id: flowId, name: flowData.name, description: flowData.description, updatedAt: now, nodes: serializedNodes, edges: serializedEdges }
+                  : f
+              ),
+              activeFlowId: flowId,
+            });
+          } else {
+            set({ 
+              flows: [...flows, { ...flowData, id: flowId, nodes: serializedNodes, edges: serializedEdges }], 
+              activeFlowId: flowId 
+            });
+          }
+
+          // Register triggers with backend
+          try {
+            const { TriggerService } = await import('@/services/triggerService');
+            await TriggerService.registerWorkflowTriggers(flowId, nodes);
+          } catch (error) {
+            console.error('Failed to register triggers:', error);
+            addLog('⚠️  Warning: Failed to register triggers');
+          }
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          addLog(`❌ Failed to save flow: ${errorMsg}`);
+          console.error('Failed to save flow:', error);
+          throw error;
+        }
+      },
+
+      loadFlow: async (flowId) => {
+        const { addLog } = get();
+        try {
+          addLog(`📂 Loading flow...`);
+          const flowJSON = await LoadFlow(flowId);
+          const flow: Flow = JSON.parse(flowJSON);
+          
+          if (!flow.nodes || !flow.edges) {
+            throw new Error('Invalid flow data');
+          }
+          
+          addLog(`✅ Flow loaded: ${flow.name}`);
+          
           set({
             nodes: flow.nodes,
             edges: flow.edges,
             activeFlowId: flowId,
           });
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          addLog(`❌ Failed to load flow: ${errorMsg}`);
+          console.error('Failed to load flow:', error);
+          throw error;
         }
       },
 
       deleteFlow: async (flowId) => {
-        const { flows, activeFlowId } = get();
+        const { flows, activeFlowId, addLog } = get();
+        
+        const flow = flows.find(f => f.id === flowId);
+        const flowName = flow?.name || 'Unknown';
         
         // Unregister triggers before deleting
-        const flow = flows.find(f => f.id === flowId);
-        if (flow) {
+        if (flow && flow.nodes && flow.nodes.length > 0) {
           try {
             const { TriggerService } = await import('@/services/triggerService');
             await TriggerService.unregisterWorkflowTriggers(flowId, flow.nodes);
@@ -292,10 +400,21 @@ export const useFlowStore = create<FlowState>()(
           }
         }
         
-        set({
-          flows: flows.filter((f) => f.id !== flowId),
-          ...(activeFlowId === flowId && { nodes: [], edges: [], activeFlowId: null }),
-        });
+        try {
+          addLog(`🗑️  Deleting flow: ${flowName}`);
+          await DeleteFlow(flowId);
+          addLog(`✅ Flow deleted successfully`);
+          
+          set({
+            flows: flows.filter((f) => f.id !== flowId),
+            ...(activeFlowId === flowId && { nodes: [], edges: [], activeFlowId: null }),
+          });
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          addLog(`❌ Failed to delete flow: ${errorMsg}`);
+          console.error('Failed to delete flow:', error);
+          throw error;
+        }
       },
 
       toggleDarkMode: () => set({ isDarkMode: !get().isDarkMode }),
@@ -459,14 +578,5 @@ export const useFlowStore = create<FlowState>()(
       },
 
       clearLogs: () => set({ logs: [] }),
-    }),
-    {
-      name: "forgeflow-storage",
-      partialize: (state) => ({
-        flows: state.flows,
-        isDarkMode: state.isDarkMode,
-        theme: state.theme,
-      }),
-    }
-  )
+    })
 );

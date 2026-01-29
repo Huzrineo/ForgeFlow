@@ -8,6 +8,7 @@ import WorkflowsPanel from "@/components/layout/WorkflowsPanel";
 import TemplatesModal from "@/components/layout/TemplatesModal";
 import ExecutionHistory from "@/components/layout/ExecutionHistory";
 import ImportExport from "@/components/layout/ImportExport";
+import SaveFlowDialog from "@/components/layout/SaveFlowDialog";
 import FlowCanvas from "@/components/flow/FlowCanvas";
 import { DialogProvider } from "@/components/ui";
 import { useFlowStore } from "@/stores/flowStore";
@@ -54,16 +55,34 @@ function SplashScreen() {
 }
 
 export default function App() {
-  const { selectedNodeId, setSelectedNodeId, settingsOpen, setSettingsOpen } = useFlowStore();
+  const { 
+    selectedNodeId, 
+    setSelectedNodeId, 
+    settingsOpen, 
+    setSettingsOpen, 
+    loadFlows,
+    saveDialogOpen,
+    setSaveDialogOpen,
+    saveFlow,
+    flows,
+    activeFlowId,
+  } = useFlowStore();
   const { executionHistoryOpen, setExecutionHistoryOpen, importExportOpen, setImportExportOpen } = useWorkflowStore();
   const { loadSettings, applyTheme } = useSettingsStore();
   const [isLoading, setIsLoading] = useState(true);
+
+  const activeFlow = flows.find((f) => f.id === activeFlowId);
+
+  const handleSaveFlow = async (name: string, description: string) => {
+    await saveFlow(name, description);
+  };
 
   useEffect(() => {
     const initApp = async () => {
       try {
         await loadSettings();
         applyTheme();
+        await loadFlows(); // Load flows from backend
       } catch (error) {
         console.error("Failed to initialize app:", error);
       } finally {
@@ -72,7 +91,7 @@ export default function App() {
     };
 
     initApp();
-  }, [loadSettings, applyTheme]);
+  }, [loadSettings, applyTheme, loadFlows]);
 
   if (isLoading) {
     return <SplashScreen />;
@@ -99,6 +118,13 @@ export default function App() {
         <WorkflowsPanel />
         <TemplatesModal />
         <DialogProvider />
+        <SaveFlowDialog
+          isOpen={saveDialogOpen}
+          onClose={() => setSaveDialogOpen(false)}
+          onSave={handleSaveFlow}
+          defaultName={activeFlow?.name || ''}
+          defaultDescription={activeFlow?.description || ''}
+        />
       </div>
     </ReactFlowProvider>
   );

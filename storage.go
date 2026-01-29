@@ -44,28 +44,33 @@ func (s *Storage) getFlowsDir() string {
 func (s *Storage) SaveFlow(flowJSON string) (string, error) {
 	s.Init()
 
-	var flow Flow
-	if err := json.Unmarshal([]byte(flowJSON), &flow); err != nil {
+	// Parse as generic map to avoid struct issues
+	var flowData map[string]interface{}
+	if err := json.Unmarshal([]byte(flowJSON), &flowData); err != nil {
 		return "", fmt.Errorf("invalid flow JSON: %w", err)
 	}
 
-	if flow.ID == "" {
-		flow.ID = fmt.Sprintf("flow-%d", time.Now().UnixNano())
-		flow.CreatedAt = time.Now().Format(time.RFC3339)
+	// Get or generate ID
+	flowID, ok := flowData["id"].(string)
+	if !ok || flowID == "" {
+		flowID = fmt.Sprintf("flow-%d", time.Now().UnixNano())
+		flowData["id"] = flowID
+		flowData["createdAt"] = time.Now().Format(time.RFC3339)
 	}
-	flow.UpdatedAt = time.Now().Format(time.RFC3339)
+	flowData["updatedAt"] = time.Now().Format(time.RFC3339)
 
-	data, err := json.MarshalIndent(flow, "", "  ")
+	// Save as-is without re-marshaling through structs
+	data, err := json.MarshalIndent(flowData, "", "  ")
 	if err != nil {
 		return "", err
 	}
 
-	filePath := filepath.Join(s.getFlowsDir(), flow.ID+".json")
+	filePath := filepath.Join(s.getFlowsDir(), flowID+".json")
 	if err := os.WriteFile(filePath, data, 0644); err != nil {
 		return "", err
 	}
 
-	return flow.ID, nil
+	return flowID, nil
 }
 
 func (s *Storage) LoadFlow(flowID string) (string, error) {
@@ -81,16 +86,6 @@ func (s *Storage) LoadFlow(flowID string) (string, error) {
 
 func (s *Storage) GetFlow(flowID string) (string, error) {
 	return s.LoadFlow(flowID)
-}
-
-type FlowMetadata struct {
-	ID          string        `json:"id"`
-	Name        string        `json:"name"`
-	Description string        `json:"description"`
-	Enabled     bool          `json:"enabled"`
-	CreatedAt   string        `json:"createdAt"`
-	UpdatedAt   string        `json:"updatedAt"`
-	Nodes       []interface{} `json:"nodes"`
 }
 
 func (s *Storage) ListFlows() ([]map[string]interface{}, error) {
@@ -114,19 +109,26 @@ func (s *Storage) ListFlows() ([]map[string]interface{}, error) {
 			continue
 		}
 
-		var flow FlowMetadata
-		if err := json.Unmarshal(data, &flow); err != nil {
+		// Parse as generic map
+		var flowData map[string]interface{}
+		if err := json.Unmarshal(data, &flowData); err != nil {
 			continue
 		}
 
+		// Count nodes
+		nodeCount := 0
+		if nodes, ok := flowData["nodes"].([]interface{}); ok {
+			nodeCount = len(nodes)
+		}
+
 		flows = append(flows, map[string]interface{}{
-			"id":          flow.ID,
-			"name":        flow.Name,
-			"description": flow.Description,
-			"enabled":     flow.Enabled,
-			"createdAt":   flow.CreatedAt,
-			"updatedAt":   flow.UpdatedAt,
-			"nodeCount":   len(flow.Nodes),
+			"id":          flowData["id"],
+			"name":        flowData["name"],
+			"description": flowData["description"],
+			"enabled":     flowData["enabled"],
+			"createdAt":   flowData["createdAt"],
+			"updatedAt":   flowData["updatedAt"],
+			"nodeCount":   nodeCount,
 		})
 	}
 

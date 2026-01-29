@@ -48,7 +48,7 @@ export default function TemplatesModal() {
     setSelectedTemplate(template);
   };
 
-  const handleUseTemplate = () => {
+  const handleUseTemplate = async () => {
     if (!selectedTemplate) return;
 
     // Convert template nodes to FlowNodes
@@ -101,9 +101,12 @@ export default function TemplatesModal() {
     setEdges(edges);
     
     // Save after a brief delay to ensure state is updated
-    setTimeout(() => {
-      saveFlow(selectedTemplate.name, selectedTemplate.description);
-    }, 100);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      await saveFlow(selectedTemplate.name, selectedTemplate.description);
+    } catch (error) {
+      console.error('Failed to save template:', error);
+    }
 
     handleClose();
     setWorkflowPanelOpen(false);

@@ -327,58 +327,7 @@ export const appNodes: NodeDefinition[] = [
   },
 
   // === PRO: AI SERVICES ===
-  {
-    type: 'action_openai',
-    category: 'apps',
-    name: 'OpenAI API',
-    icon: '🧠',
-    color: '#10a37f',
-    description: 'Direct OpenAI API call (GPT, DALL-E)',
-    inputs: [{ id: 'in', type: 'input' }],
-    outputs: [{ id: 'out', type: 'output', label: 'Response' }],
-    defaultData: { apiKey: '', model: 'gpt-4o-mini', action: 'chat', prompt: '', systemPrompt: '', maxTokens: 1000, temperature: 0.7 },
-    fields: [
-      { key: 'apiKey', label: 'API Key', type: 'password', placeholder: 'sk-...', required: true },
-      { key: 'action', label: 'Action', type: 'select', options: [
-        { value: 'chat', label: 'Chat Completion' },
-        { value: 'image', label: 'Generate Image (DALL-E)' },
-      ]},
-      { key: 'model', label: 'Model', type: 'select', options: [
-        { value: 'gpt-4o', label: 'GPT-4o' },
-        { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
-        { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
-        { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' },
-        { value: 'dall-e-3', label: 'DALL-E 3' },
-        { value: 'dall-e-2', label: 'DALL-E 2' },
-      ]},
-      { key: 'systemPrompt', label: 'System Prompt', type: 'textarea', placeholder: 'You are a helpful assistant...' },
-      { key: 'prompt', label: 'Prompt', type: 'textarea', placeholder: '{{output}} or your prompt', required: true },
-      { key: 'maxTokens', label: 'Max Tokens', type: 'number', placeholder: '1000', defaultValue: 1000 },
-      { key: 'temperature', label: 'Temperature', type: 'number', placeholder: '0.7', defaultValue: 0.7 },
-    ],
-  },
-  {
-    type: 'action_anthropic',
-    category: 'apps',
-    name: 'Claude API',
-    icon: '🤖',
-    color: '#d97706',
-    description: 'Anthropic Claude API',
-    inputs: [{ id: 'in', type: 'input' }],
-    outputs: [{ id: 'out', type: 'output', label: 'Response' }],
-    defaultData: { apiKey: '', model: 'claude-3-5-sonnet-20241022', prompt: '', systemPrompt: '', maxTokens: 1000 },
-    fields: [
-      { key: 'apiKey', label: 'API Key', type: 'password', placeholder: 'sk-ant-...', required: true },
-      { key: 'model', label: 'Model', type: 'select', options: [
-        { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
-        { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus' },
-        { value: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku' },
-      ]},
-      { key: 'systemPrompt', label: 'System Prompt', type: 'textarea', placeholder: 'You are a helpful assistant...' },
-      { key: 'prompt', label: 'Prompt', type: 'textarea', placeholder: '{{output}} or your prompt', required: true },
-      { key: 'maxTokens', label: 'Max Tokens', type: 'number', placeholder: '1000', defaultValue: 1000 },
-    ],
-  },
+  // OpenAI and Claude nodes removed - use the generic AI node instead
 
   // === PRO: GOOGLE SERVICES ===
   {
@@ -460,28 +409,7 @@ export const appNodes: NodeDefinition[] = [
   },
 
   // === PRO: E-COMMERCE ===
-  {
-    type: 'action_stripe',
-    category: 'apps',
-    name: 'Stripe',
-    icon: '💳',
-    color: '#635BFF',
-    description: 'Stripe payment operations',
-    inputs: [{ id: 'in', type: 'input' }],
-    outputs: [{ id: 'out', type: 'output', label: 'Result' }],
-    defaultData: { apiKey: '', action: 'customers', customerId: '' },
-    fields: [
-      { key: 'apiKey', label: 'Secret Key', type: 'password', placeholder: 'sk_...', required: true },
-      { key: 'action', label: 'Action', type: 'select', options: [
-        { value: 'customers', label: 'List Customers' },
-        { value: 'customer', label: 'Get Customer' },
-        { value: 'payments', label: 'List Payments' },
-        { value: 'subscriptions', label: 'List Subscriptions' },
-        { value: 'balance', label: 'Get Balance' },
-      ]},
-      { key: 'customerId', label: 'Customer ID (optional)', type: 'text', placeholder: 'cus_...' },
-    ],
-  },
+  // Stripe node removed
 
   // === PRO: DATABASE ===
   {

@@ -18,16 +18,21 @@ const (
 )
 
 type FlowNode struct {
-	ID          string                 `json:"id"`
-	Type        string                 `json:"type"`
-	Category    string                 `json:"category"`
-	Label       string                 `json:"label"`
-	Description string                 `json:"description,omitempty"`
-	Config      map[string]interface{} `json:"config,omitempty"`
-	Position    struct {
+	ID       string `json:"id"`
+	Type     string `json:"type"`
+	Position struct {
 		X float64 `json:"x"`
 		Y float64 `json:"y"`
 	} `json:"position"`
+	Data struct {
+		Label       string                 `json:"label"`
+		Category    string                 `json:"category"`
+		Icon        string                 `json:"icon,omitempty"`
+		Description string                 `json:"description,omitempty"`
+		NodeType    string                 `json:"nodeType,omitempty"`
+		Config      map[string]interface{} `json:"config,omitempty"`
+		Status      string                 `json:"status,omitempty"`
+	} `json:"data"`
 }
 
 type FlowEdge struct {
@@ -177,7 +182,7 @@ func (e *Engine) executeNode(ctx context.Context, node *FlowNode, execution *Flo
 	result.Duration = time.Since(start).Milliseconds()
 	result.Output = map[string]interface{}{
 		"nodeId":   node.ID,
-		"category": node.Category,
+		"category": node.Data.Category,
 		"executed": true,
 	}
 

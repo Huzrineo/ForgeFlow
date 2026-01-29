@@ -126,11 +126,6 @@ export class WorkflowExecutor {
       // Execute connected nodes
       const outgoing = this.edges.filter(e => e.source === nodeId);
       const nodeType = node.data.nodeType;
-      
-      // DEBUG: Log outgoing edges
-      if (outgoing.length > 0) {
-        this.onLog('info', `🔍 Node has ${outgoing.length} outgoing edge(s)`, nodeId);
-      }
 
       // === 1. Handle Loops ===
       if (nodeType === 'loop_foreach') {

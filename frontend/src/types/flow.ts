@@ -25,6 +25,7 @@ export interface Flow {
   createdAt: string;
   updatedAt: string;
   enabled: boolean;
+  nodeCount?: number; // For list view
 }
 
 export interface ExecutionResult {
