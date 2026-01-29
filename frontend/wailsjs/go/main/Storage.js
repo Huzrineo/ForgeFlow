@@ -14,6 +14,10 @@ export function ExportFlow(arg1) {
   return window['go']['main']['Storage']['ExportFlow'](arg1);
 }
 
+export function GetFlow(arg1) {
+  return window['go']['main']['Storage']['GetFlow'](arg1);
+}
+
 export function ImportFlow(arg1) {
   return window['go']['main']['Storage']['ImportFlow'](arg1);
 }

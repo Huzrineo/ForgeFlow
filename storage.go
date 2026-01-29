@@ -79,6 +79,11 @@ func (s *Storage) LoadFlow(flowID string) (string, error) {
 	return string(data), nil
 }
 
+// GetFlow is an alias for LoadFlow (used by TriggerManager)
+func (s *Storage) GetFlow(flowID string) (string, error) {
+	return s.LoadFlow(flowID)
+}
+
 func (s *Storage) ListFlows() ([]map[string]interface{}, error) {
 	if s.dataDir == "" {
 		if err := s.Init(); err != nil {

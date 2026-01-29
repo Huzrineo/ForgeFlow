@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"embed"
 
 	"github.com/wailsapp/wails/v2"
@@ -16,6 +17,9 @@ func main() {
 	app := NewApp()
 	storage := NewStorage()
 	engine := NewEngine(storage)
+	triggerManager := NewTriggerManager(engine, storage)
+	actionService := NewActionService(app)
+	excelService := NewExcelService()
 
 	err := wails.Run(&options.App{
 		Title:             "ForgeFlow",
@@ -32,12 +36,18 @@ func main() {
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},
-		OnStartup:  app.startup,
-		OnShutdown: app.shutdown,
+		OnStartup: app.startup,
+		OnShutdown: func(ctx context.Context) {
+			triggerManager.Shutdown()
+			app.shutdown(ctx)
+		},
 		Bind: []interface{}{
 			app,
 			engine,
 			storage,
+			triggerManager,
+			actionService,
+			excelService,
 		},
 		Windows: &windows.Options{
 			WebviewIsTransparent: false,

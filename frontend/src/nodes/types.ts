@@ -12,9 +12,12 @@ export type NodeFieldType =
   | 'code'
   // Custom UI fields
   | 'file'
+  | 'file-save'
   | 'folder'
   | 'url'
-  | 'cron';
+  | 'cron'
+  | 'hotkey'
+  | 'model-select';
 
 export interface NodeField {
   key: string;
@@ -24,6 +27,7 @@ export interface NodeField {
   options?: { value: string; label: string }[];
   required?: boolean;
   defaultValue?: any;
+  fileTypes?: string[];
 }
 
 export interface NodePort {

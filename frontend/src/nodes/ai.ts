@@ -2,133 +2,47 @@ import type { NodeDefinition } from './types';
 
 export const aiNodes: NodeDefinition[] = [
   {
-    type: 'ai_summarize',
+    type: 'action_ai',
     category: 'ai',
-    name: 'Summarize',
-    icon: 'ai',
+    name: 'AI Prompt',
+    icon: '🤖',
     color: '#8b5cf6',
-    description: 'Summarize text content',
+    description: 'Send prompt to AI (with optional memory)',
     inputs: [{ id: 'in', type: 'input' }],
-    outputs: [{ id: 'out', type: 'output', label: 'Summary' }],
-    defaultData: { prompt: '', model: '', temperature: 0.7 },
+    outputs: [{ id: 'out', type: 'output', label: 'Response' }],
+    defaultData: { 
+      prompt: '', 
+      systemPrompt: '', 
+      model: '', 
+      temperature: 0.7, 
+      enableMemory: false, 
+      memoryKey: '', 
+      maxMessages: 20, 
+      memoryExpiry: 30 
+    },
     fields: [
-      { 
-        key: 'prompt', 
-        label: 'Input Text', 
-        type: 'textarea', 
-        placeholder: 'Text to summarize... Use {{output}}', 
-        required: true 
-      },
-      { 
-        key: 'model', 
-        label: 'Model', 
-        type: 'text', 
-        placeholder: 'gpt-4' 
-      },
-      { 
-        key: 'temperature', 
-        label: 'Temperature', 
-        type: 'number', 
-        defaultValue: 0.7 
-      },
-    ],
-  },
-  {
-    type: 'ai_classify',
-    category: 'ai',
-    name: 'Classify',
-    icon: 'ai',
-    color: '#8b5cf6',
-    description: 'Classify text into categories',
-    inputs: [{ id: 'in', type: 'input' }],
-    outputs: [{ id: 'out', type: 'output', label: 'Category' }],
-    defaultData: { prompt: '', categories: '', model: '' },
-    fields: [
-      { 
-        key: 'prompt', 
-        label: 'Input Text', 
-        type: 'textarea', 
-        placeholder: 'Text to classify...', 
-        required: true 
-      },
-      { 
-        key: 'categories', 
-        label: 'Categories', 
-        type: 'text', 
-        placeholder: 'urgent, normal, low', 
-        required: true 
-      },
-      { 
-        key: 'model', 
-        label: 'Model', 
-        type: 'text', 
-        placeholder: 'gpt-4' 
-      },
-    ],
-  },
-  {
-    type: 'ai_extract',
-    category: 'ai',
-    name: 'Extract Data',
-    icon: 'ai',
-    color: '#8b5cf6',
-    description: 'Extract structured data from text',
-    inputs: [{ id: 'in', type: 'input' }],
-    outputs: [{ id: 'out', type: 'output', label: 'Data' }],
-    defaultData: { prompt: '', schema: '', model: '' },
-    fields: [
-      { 
-        key: 'prompt', 
-        label: 'Input Text', 
-        type: 'textarea', 
-        placeholder: 'Text to extract from...', 
-        required: true 
-      },
-      { 
-        key: 'schema', 
-        label: 'Data Schema (JSON)', 
-        type: 'json', 
-        placeholder: '{"name": "string", "email": "string"}', 
-        required: true 
-      },
-      { 
-        key: 'model', 
-        label: 'Model', 
-        type: 'text', 
-        placeholder: 'gpt-4' 
-      },
-    ],
-  },
-  {
-    type: 'ai_generate',
-    category: 'ai',
-    name: 'Generate Text',
-    icon: 'ai',
-    color: '#8b5cf6',
-    description: 'Generate text from prompt',
-    inputs: [{ id: 'in', type: 'input' }],
-    outputs: [{ id: 'out', type: 'output', label: 'Text' }],
-    defaultData: { prompt: '', model: '', temperature: 0.7 },
-    fields: [
-      { 
-        key: 'prompt', 
-        label: 'Prompt', 
-        type: 'textarea', 
-        placeholder: 'Write a blog post about...', 
-        required: true 
-      },
-      { 
-        key: 'model', 
-        label: 'Model', 
-        type: 'text', 
-        placeholder: 'gpt-4' 
-      },
-      { 
-        key: 'temperature', 
-        label: 'Temperature', 
-        type: 'number', 
-        defaultValue: 0.7 
-      },
+      { key: 'model', label: 'Model', type: 'model-select' },
+      { key: 'systemPrompt', label: 'System Prompt', type: 'textarea', placeholder: 'You are a helpful assistant...' },
+      { key: 'prompt', label: 'User Prompt', type: 'textarea', placeholder: 'Your prompt... Use {{output}} for previous data', required: true },
+      { key: 'temperature', label: 'Temperature (0-1)', type: 'number', placeholder: '0.7', defaultValue: 0.7 },
+      { key: 'enableMemory', label: 'Enable Memory', type: 'boolean', defaultValue: false },
+      { key: 'memoryKey', label: 'Memory Key', type: 'text', placeholder: '{{chatId}} - unique ID per conversation' },
+      { key: 'maxMessages', label: 'Max Messages', type: 'select', options: [
+        { value: '5', label: '5 messages' },
+        { value: '10', label: '10 messages' },
+        { value: '20', label: '20 messages' },
+        { value: '50', label: '50 messages' },
+        { value: '100', label: '100 messages' },
+      ], defaultValue: '20' },
+      { key: 'memoryExpiry', label: 'Memory Expiry', type: 'select', options: [
+        { value: '5', label: '5 minutes' },
+        { value: '15', label: '15 minutes' },
+        { value: '30', label: '30 minutes' },
+        { value: '60', label: '1 hour' },
+        { value: '360', label: '6 hours' },
+        { value: '1440', label: '24 hours' },
+        { value: '0', label: 'Never expire' },
+      ], defaultValue: '30' },
     ],
   },
 ];

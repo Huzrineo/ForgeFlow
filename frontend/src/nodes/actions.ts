@@ -1,499 +1,312 @@
 import type { NodeDefinition } from './types';
 
 export const actionNodes: NodeDefinition[] = [
-  // === HTTP & API ===
-  {
-    type: 'action_http',
-    category: 'action',
-    name: 'HTTP Request',
-    icon: 'api',
-    color: '#3b82f6',
-    description: 'Make an HTTP request',
-    inputs: [{ id: 'in', type: 'input' }],
-    outputs: [{ id: 'out', type: 'output', label: 'Response' }],
-    defaultData: { method: 'GET', url: '', headers: '{}', body: '' },
-    fields: [
-      { 
-        key: 'method', 
-        label: 'Method', 
-        type: 'select', 
-        options: [
-          { value: 'GET', label: 'GET' },
-          { value: 'POST', label: 'POST' },
-          { value: 'PUT', label: 'PUT' },
-          { value: 'DELETE', label: 'DELETE' },
-        ]
-      },
-      { 
-        key: 'url', 
-        label: 'URL', 
-        type: 'url', 
-        placeholder: 'https://api.example.com/data', 
-        required: true 
-      },
-      { 
-        key: 'headers', 
-        label: 'Headers (JSON)', 
-        type: 'json', 
-        placeholder: '{"Authorization": "Bearer ..."}' 
-      },
-      { 
-        key: 'body', 
-        label: 'Body', 
-        type: 'textarea', 
-        placeholder: 'Request body...' 
-      },
-    ],
-  },
-
-  // === FILE OPERATIONS ===
-  {
-    type: 'action_file_read',
-    category: 'action',
-    name: 'Read File',
-    icon: 'fileOps',
-    color: '#3b82f6',
-    description: 'Read file contents',
-    inputs: [{ id: 'in', type: 'input' }],
-    outputs: [{ id: 'out', type: 'output', label: 'Content' }],
-    defaultData: { path: '' },
-    fields: [
-      { 
-        key: 'path', 
-        label: 'File Path', 
-        type: 'file', 
-        placeholder: '/path/to/file.txt', 
-        required: true 
-      },
-    ],
-  },
-  {
-    type: 'action_file_write',
-    category: 'action',
-    name: 'Write File',
-    icon: 'fileOps',
-    color: '#3b82f6',
-    description: 'Write content to file',
-    inputs: [{ id: 'in', type: 'input' }],
-    outputs: [{ id: 'out', type: 'output', label: 'Done' }],
-    defaultData: { path: '', content: '' },
-    fields: [
-      { 
-        key: 'path', 
-        label: 'File Path', 
-        type: 'file', 
-        placeholder: '/path/to/file.txt', 
-        required: true 
-      },
-      { 
-        key: 'content', 
-        label: 'Content', 
-        type: 'textarea', 
-        placeholder: 'File content... Use {{output}}', 
-        required: true 
-      },
-    ],
-  },
-  {
-    type: 'action_file_delete',
-    category: 'action',
-    name: 'Delete File',
-    icon: 'fileOps',
-    color: '#3b82f6',
-    description: 'Delete a file',
-    inputs: [{ id: 'in', type: 'input' }],
-    outputs: [{ id: 'out', type: 'output', label: 'Done' }],
-    defaultData: { path: '' },
-    fields: [
-      { 
-        key: 'path', 
-        label: 'File Path', 
-        type: 'file', 
-        placeholder: '/path/to/file.txt', 
-        required: true 
-      },
-    ],
-  },
-  {
-    type: 'action_file_copy',
-    category: 'action',
-    name: 'Copy File',
-    icon: 'fileOps',
-    color: '#3b82f6',
-    description: 'Copy file to destination',
-    inputs: [{ id: 'in', type: 'input' }],
-    outputs: [{ id: 'out', type: 'output', label: 'Done' }],
-    defaultData: { source: '', destination: '' },
-    fields: [
-      { 
-        key: 'source', 
-        label: 'Source Path', 
-        type: 'file', 
-        placeholder: '/path/to/source.txt', 
-        required: true 
-      },
-      { 
-        key: 'destination', 
-        label: 'Destination Path', 
-        type: 'file', 
-        placeholder: '/path/to/dest.txt', 
-        required: true 
-      },
-    ],
-  },
-  {
-    type: 'action_file_move',
-    category: 'action',
-    name: 'Move File',
-    icon: 'fileOps',
-    color: '#3b82f6',
-    description: 'Move/rename file',
-    inputs: [{ id: 'in', type: 'input' }],
-    outputs: [{ id: 'out', type: 'output', label: 'Done' }],
-    defaultData: { source: '', destination: '' },
-    fields: [
-      { 
-        key: 'source', 
-        label: 'Source Path', 
-        type: 'file', 
-        placeholder: '/path/to/source.txt', 
-        required: true 
-      },
-      { 
-        key: 'destination', 
-        label: 'Destination Path', 
-        type: 'file', 
-        placeholder: '/path/to/dest.txt', 
-        required: true 
-      },
-    ],
-  },
-
-  // === SHELL & SYSTEM ===
-  {
-    type: 'action_shell',
-    category: 'action',
-    name: 'Run Command',
-    icon: 'shell',
-    color: '#3b82f6',
-    description: 'Execute a shell command',
-    inputs: [{ id: 'in', type: 'input' }],
-    outputs: [{ id: 'out', type: 'output', label: 'Output' }],
-    defaultData: { command: '', args: '', workDir: '' },
-    fields: [
-      { 
-        key: 'command', 
-        label: 'Command', 
-        type: 'text', 
-        placeholder: 'node', 
-        required: true 
-      },
-      { 
-        key: 'args', 
-        label: 'Arguments', 
-        type: 'text', 
-        placeholder: 'script.js --flag' 
-      },
-      { 
-        key: 'workDir', 
-        label: 'Working Directory', 
-        type: 'folder', 
-        placeholder: '/path/to/dir' 
-      },
-    ],
-  },
-
-  // === NOTIFICATIONS ===
-  {
-    type: 'action_notification',
-    category: 'action',
-    name: 'Notification',
-    icon: 'notify',
-    color: '#3b82f6',
-    description: 'Show a notification',
-    inputs: [{ id: 'in', type: 'input' }],
-    outputs: [{ id: 'out', type: 'output', label: 'Done' }],
-    defaultData: { title: '', message: '' },
-    fields: [
-      { 
-        key: 'title', 
-        label: 'Title', 
-        type: 'text', 
-        placeholder: 'Notification title', 
-        required: true 
-      },
-      { 
-        key: 'message', 
-        label: 'Message', 
-        type: 'text', 
-        placeholder: 'Notification message' 
-      },
-    ],
-  },
-
-  // === UTILITIES ===
-  {
-    type: 'action_delay',
-    category: 'action',
-    name: 'Delay',
-    icon: 'time',
-    color: '#3b82f6',
-    description: 'Wait for a duration',
-    inputs: [{ id: 'in', type: 'input' }],
-    outputs: [{ id: 'out', type: 'output', label: 'Continue' }],
-    defaultData: { duration: 1000 },
-    fields: [
-      { 
-        key: 'duration', 
-        label: 'Duration (ms)', 
-        type: 'number', 
-        placeholder: '1000', 
-        required: true 
-      },
-    ],
-  },
+  // === MOST USED - Core Actions ===
   {
     type: 'action_set_variable',
     category: 'action',
     name: 'Set Variable',
-    icon: 'custom',
+    icon: '📝',
     color: '#3b82f6',
     description: 'Set a workflow variable',
     inputs: [{ id: 'in', type: 'input' }],
     outputs: [{ id: 'out', type: 'output', label: 'Done' }],
     defaultData: { name: '', value: '' },
     fields: [
-      { 
-        key: 'name', 
-        label: 'Variable Name', 
-        type: 'text', 
-        placeholder: 'myVariable', 
-        required: true 
-      },
-      { 
-        key: 'value', 
-        label: 'Value', 
-        type: 'textarea', 
-        placeholder: 'Value or {{expression}}' 
-      },
+      { key: 'name', label: 'Variable Name', type: 'text', placeholder: 'myVariable', required: true },
+      { key: 'value', label: 'Value', type: 'textarea', placeholder: 'Value or {{expression}}' },
     ],
   },
   {
-    type: 'action_clipboard_write',
+    type: 'action_http',
     category: 'action',
-    name: 'Copy to Clipboard',
-    icon: 'notify',
+    name: 'HTTP Request',
+    icon: '🌐',
     color: '#3b82f6',
-    description: 'Copy text to clipboard',
+    description: 'Make an HTTP request',
     inputs: [{ id: 'in', type: 'input' }],
-    outputs: [{ id: 'out', type: 'output', label: 'Done' }],
-    defaultData: { content: '' },
+    outputs: [{ id: 'out', type: 'output', label: 'Response' }],
+    defaultData: { method: 'GET', url: '', headers: '{}', body: '' },
     fields: [
-      { 
-        key: 'content', 
-        label: 'Content', 
-        type: 'textarea', 
-        placeholder: 'Text to copy... Use {{output}}', 
-        required: true 
-      },
-    ],
-  },
-  {
-    type: 'action_open_url',
-    category: 'action',
-    name: 'Open URL',
-    icon: 'api',
-    color: '#3b82f6',
-    description: 'Open URL in browser',
-    inputs: [{ id: 'in', type: 'input' }],
-    outputs: [{ id: 'out', type: 'output', label: 'Done' }],
-    defaultData: { url: '' },
-    fields: [
-      { 
-        key: 'url', 
-        label: 'URL', 
-        type: 'url', 
-        placeholder: 'https://example.com', 
-        required: true 
-      },
-    ],
-  },
-
-  // === DATA PROCESSING ===
-  {
-    type: 'action_json_parse',
-    category: 'action',
-    name: 'Parse JSON',
-    icon: 'custom',
-    color: '#3b82f6',
-    description: 'Parse JSON string',
-    inputs: [{ id: 'in', type: 'input' }],
-    outputs: [{ id: 'out', type: 'output', label: 'Object' }],
-    defaultData: { json: '' },
-    fields: [
-      { 
-        key: 'json', 
-        label: 'JSON String', 
-        type: 'textarea', 
-        placeholder: '{"key": "value"} or {{output}}', 
-        required: true 
-      },
-    ],
-  },
-  {
-    type: 'action_json_stringify',
-    category: 'action',
-    name: 'Stringify JSON',
-    icon: 'custom',
-    color: '#3b82f6',
-    description: 'Convert object to JSON string',
-    inputs: [{ id: 'in', type: 'input' }],
-    outputs: [{ id: 'out', type: 'output', label: 'String' }],
-    defaultData: { object: '' },
-    fields: [
-      { 
-        key: 'object', 
-        label: 'Object', 
-        type: 'textarea', 
-        placeholder: '{{output}}', 
-        required: true 
-      },
+      { key: 'method', label: 'Method', type: 'select', options: [
+        { value: 'GET', label: 'GET' },
+        { value: 'POST', label: 'POST' },
+        { value: 'PUT', label: 'PUT' },
+        { value: 'DELETE', label: 'DELETE' },
+      ]},
+      { key: 'url', label: 'URL', type: 'url', placeholder: 'https://api.example.com/data', required: true },
+      { key: 'headers', label: 'Headers (JSON)', type: 'json', placeholder: '{"Authorization": "Bearer ..."}' },
+      { key: 'body', label: 'Body', type: 'textarea', placeholder: 'Request body...' },
     ],
   },
   {
     type: 'action_template',
     category: 'action',
     name: 'Template',
-    icon: 'custom',
+    icon: '📄',
     color: '#3b82f6',
     description: 'Render a text template',
     inputs: [{ id: 'in', type: 'input' }],
     outputs: [{ id: 'out', type: 'output', label: 'Text' }],
     defaultData: { template: '' },
     fields: [
-      { 
-        key: 'template', 
-        label: 'Template', 
-        type: 'textarea', 
-        placeholder: 'Hello {{name}}! Today is {{date}}.', 
-        required: true 
-      },
+      { key: 'template', label: 'Template', type: 'textarea', placeholder: 'Hello {{name}}! Today is {{date}}.', required: true },
     ],
   },
+  {
+    type: 'action_clipboard_write',
+    category: 'action',
+    name: 'Copy to Clipboard',
+    icon: '📋',
+    color: '#3b82f6',
+    description: 'Copy text to clipboard',
+    inputs: [{ id: 'in', type: 'input' }],
+    outputs: [{ id: 'out', type: 'output', label: 'Done' }],
+    defaultData: { content: '' },
+    fields: [
+      { key: 'content', label: 'Content', type: 'textarea', placeholder: 'Text to copy... Use {{output}}', required: true },
+    ],
+  },
+  {
+    type: 'action_notification',
+    category: 'action',
+    name: 'Notification',
+    icon: '🔔',
+    color: '#3b82f6',
+    description: 'Show a notification',
+    inputs: [{ id: 'in', type: 'input' }],
+    outputs: [{ id: 'out', type: 'output', label: 'Done' }],
+    defaultData: { title: '', message: '' },
+    fields: [
+      { key: 'title', label: 'Title', type: 'text', placeholder: 'Notification title', required: true },
+      { key: 'message', label: 'Message', type: 'text', placeholder: 'Notification message' },
+    ],
+  },
+  {
+    type: 'action_open_url',
+    category: 'action',
+    name: 'Open URL',
+    icon: '🔗',
+    color: '#3b82f6',
+    description: 'Open URL in browser',
+    inputs: [{ id: 'in', type: 'input' }],
+    outputs: [{ id: 'out', type: 'output', label: 'Done' }],
+    defaultData: { url: '' },
+    fields: [
+      { key: 'url', label: 'URL', type: 'url', placeholder: 'https://example.com', required: true },
+    ],
+  },
+  {
+    type: 'action_delay',
+    category: 'action',
+    name: 'Delay',
+    icon: '⏳',
+    color: '#3b82f6',
+    description: 'Wait for a duration',
+    inputs: [{ id: 'in', type: 'input' }],
+    outputs: [{ id: 'out', type: 'output', label: 'Continue' }],
+    defaultData: { duration: 1000 },
+    fields: [
+      { key: 'duration', label: 'Duration (ms)', type: 'number', placeholder: '1000', required: true },
+    ],
+  },
+
+  // === FILE OPERATIONS (Consolidated) ===
+  {
+    type: 'action_file',
+    category: 'action',
+    name: 'File',
+    icon: '📄',
+    color: '#3b82f6',
+    description: 'Read, write, or append to file',
+    inputs: [{ id: 'in', type: 'input' }],
+    outputs: [{ id: 'out', type: 'output', label: 'Result' }],
+    defaultData: { mode: 'read', path: '', content: '' },
+    fields: [
+      { key: 'mode', label: 'Mode', type: 'select', options: [
+        { value: 'read', label: 'Read File' },
+        { value: 'write', label: 'Write File' },
+        { value: 'append', label: 'Append to File' },
+      ]},
+      { key: 'path', label: 'File Path', type: 'file', placeholder: '/path/to/file.txt', required: true },
+      { key: 'content', label: 'Content (for write/append)', type: 'textarea', placeholder: '{{output}} or text' },
+    ],
+  },
+  {
+    type: 'action_file_manage',
+    category: 'action',
+    name: 'File Manager',
+    icon: '📁',
+    color: '#3b82f6',
+    description: 'Copy, move, or delete files',
+    inputs: [{ id: 'in', type: 'input' }],
+    outputs: [{ id: 'out', type: 'output', label: 'Done' }],
+    defaultData: { operation: 'copy', source: '', destination: '' },
+    fields: [
+      { key: 'operation', label: 'Operation', type: 'select', options: [
+        { value: 'copy', label: 'Copy File' },
+        { value: 'move', label: 'Move/Rename File' },
+        { value: 'delete', label: 'Delete File' },
+        { value: 'exists', label: 'Check if Exists' },
+      ]},
+      { key: 'source', label: 'Source Path', type: 'file', placeholder: '/path/to/source.txt', required: true },
+      { key: 'destination', label: 'Destination (for copy/move)', type: 'file-save', placeholder: '/path/to/dest.txt' },
+    ],
+  },
+  {
+    type: 'action_excel_write',
+    category: 'action',
+    name: 'Write Excel',
+    icon: '📊',
+    color: '#22c55e',
+    description: 'Write data to Excel file (.xlsx)',
+    inputs: [{ id: 'in', type: 'input' }],
+    outputs: [{ id: 'out', type: 'output', label: 'Done' }],
+    defaultData: { path: '', data: '', sheetName: 'Sheet1', includeHeaders: true },
+    fields: [
+      { key: 'path', label: 'File Path', type: 'file-save', placeholder: '/path/to/file.xlsx', required: true, fileTypes: ['.xlsx'] },
+      { key: 'data', label: 'Data (JSON)', type: 'textarea', placeholder: '[{"name": "John", "age": 30}] or {{output}}', required: true },
+      { key: 'sheetName', label: 'Sheet Name', type: 'text', placeholder: 'Sheet1', defaultValue: 'Sheet1' },
+      { key: 'includeHeaders', label: 'Include Headers', type: 'boolean', defaultValue: true },
+    ],
+  },
+
+  // === DATA PROCESSING ===
   {
     type: 'action_regex',
     category: 'action',
     name: 'Regex',
-    icon: 'custom',
+    icon: '🔍',
     color: '#3b82f6',
     description: 'Extract or replace with regex',
     inputs: [{ id: 'in', type: 'input' }],
     outputs: [{ id: 'out', type: 'output', label: 'Result' }],
     defaultData: { text: '', pattern: '', replacement: '', mode: 'match' },
     fields: [
-      { 
-        key: 'text', 
-        label: 'Input Text', 
-        type: 'textarea', 
-        placeholder: '{{output}}', 
-        required: true 
-      },
-      { 
-        key: 'pattern', 
-        label: 'Regex Pattern', 
-        type: 'text', 
-        placeholder: '\\d+', 
-        required: true 
-      },
-      { 
-        key: 'mode', 
-        label: 'Mode', 
-        type: 'select', 
-        options: [
-          { value: 'match', label: 'Match (extract)' },
-          { value: 'matchAll', label: 'Match All' },
-          { value: 'replace', label: 'Replace' },
-          { value: 'test', label: 'Test (true/false)' },
-        ]
-      },
-      { 
-        key: 'replacement', 
-        label: 'Replacement', 
-        type: 'text', 
-        placeholder: 'For replace mode' 
-      },
+      { key: 'text', label: 'Input Text', type: 'textarea', placeholder: '{{output}}', required: true },
+      { key: 'pattern', label: 'Regex Pattern', type: 'text', placeholder: '\\d+', required: true },
+      { key: 'mode', label: 'Mode', type: 'select', options: [
+        { value: 'match', label: 'Match (extract)' },
+        { value: 'matchAll', label: 'Match All' },
+        { value: 'replace', label: 'Replace' },
+        { value: 'test', label: 'Test (true/false)' },
+      ]},
+      { key: 'replacement', label: 'Replacement', type: 'text', placeholder: 'For replace mode' },
     ],
   },
   {
     type: 'action_math',
     category: 'action',
     name: 'Math',
-    icon: 'custom',
+    icon: '🔢',
     color: '#3b82f6',
     description: 'Perform math operations',
     inputs: [{ id: 'in', type: 'input' }],
     outputs: [{ id: 'out', type: 'output', label: 'Result' }],
     defaultData: { operation: 'add', a: '', b: '' },
     fields: [
-      { 
-        key: 'operation', 
-        label: 'Operation', 
-        type: 'select', 
-        options: [
-          { value: 'add', label: 'Add (+)' },
-          { value: 'subtract', label: 'Subtract (-)' },
-          { value: 'multiply', label: 'Multiply (×)' },
-          { value: 'divide', label: 'Divide (÷)' },
-          { value: 'modulo', label: 'Modulo (%)' },
-          { value: 'power', label: 'Power (^)' },
-          { value: 'round', label: 'Round' },
-          { value: 'floor', label: 'Floor' },
-          { value: 'ceil', label: 'Ceiling' },
-          { value: 'abs', label: 'Absolute' },
-        ]
-      },
-      { 
-        key: 'a', 
-        label: 'Value A', 
-        type: 'text', 
-        placeholder: '{{output}} or number' 
-      },
-      { 
-        key: 'b', 
-        label: 'Value B', 
-        type: 'text', 
-        placeholder: 'Second value (if needed)' 
-      },
+      { key: 'operation', label: 'Operation', type: 'select', options: [
+        { value: 'add', label: 'Add (+)' },
+        { value: 'subtract', label: 'Subtract (-)' },
+        { value: 'multiply', label: 'Multiply (×)' },
+        { value: 'divide', label: 'Divide (÷)' },
+        { value: 'modulo', label: 'Modulo (%)' },
+        { value: 'power', label: 'Power (^)' },
+        { value: 'round', label: 'Round' },
+        { value: 'floor', label: 'Floor' },
+        { value: 'ceil', label: 'Ceiling' },
+        { value: 'abs', label: 'Absolute' },
+        { value: 'random', label: 'Random (0-1)' },
+      ]},
+      { key: 'a', label: 'Value A', type: 'text', placeholder: '{{output}} or number' },
+      { key: 'b', label: 'Value B', type: 'text', placeholder: 'Second value (if needed)' },
+    ],
+  },
+  {
+    type: 'action_date',
+    category: 'action',
+    name: 'Date/Time',
+    icon: '📅',
+    color: '#3b82f6',
+    description: 'Get or format date/time',
+    inputs: [{ id: 'in', type: 'input' }],
+    outputs: [{ id: 'out', type: 'output', label: 'Date' }],
+    defaultData: { operation: 'now', format: 'YYYY-MM-DD', input: '' },
+    fields: [
+      { key: 'operation', label: 'Operation', type: 'select', options: [
+        { value: 'now', label: 'Current Date/Time' },
+        { value: 'format', label: 'Format Date' },
+        { value: 'parse', label: 'Parse Date' },
+        { value: 'add', label: 'Add Time' },
+        { value: 'diff', label: 'Difference' },
+      ]},
+      { key: 'format', label: 'Format', type: 'text', placeholder: 'YYYY-MM-DD HH:mm:ss' },
+      { key: 'input', label: 'Input Date', type: 'text', placeholder: 'For format/parse operations' },
+    ],
+  },
+  {
+    type: 'action_json_parse',
+    category: 'action',
+    name: 'Parse JSON',
+    icon: '{ }',
+    color: '#3b82f6',
+    description: 'Parse JSON string',
+    inputs: [{ id: 'in', type: 'input' }],
+    outputs: [{ id: 'out', type: 'output', label: 'Object' }],
+    defaultData: { json: '' },
+    fields: [
+      { key: 'json', label: 'JSON String', type: 'textarea', placeholder: '{"key": "value"} or {{output}}', required: true },
+    ],
+  },
+  {
+    type: 'action_json_stringify',
+    category: 'action',
+    name: 'Stringify JSON',
+    icon: '{ }',
+    color: '#3b82f6',
+    description: 'Convert object to JSON string',
+    inputs: [{ id: 'in', type: 'input' }],
+    outputs: [{ id: 'out', type: 'output', label: 'String' }],
+    defaultData: { object: '' },
+    fields: [
+      { key: 'object', label: 'Object', type: 'textarea', placeholder: '{{output}}', required: true },
+    ],
+  },
+
+  // === SYSTEM ===
+  {
+    type: 'action_script',
+    category: 'action',
+    name: 'Run Script',
+    icon: '💻',
+    color: '#3b82f6',
+    description: 'Execute a shell command',
+    inputs: [{ id: 'in', type: 'input' }],
+    outputs: [{ id: 'out', type: 'output', label: 'Output' }],
+    defaultData: { command: '', args: '', workDir: '' },
+    fields: [
+      { key: 'command', label: 'Command', type: 'text', placeholder: 'node', required: true },
+      { key: 'args', label: 'Arguments', type: 'text', placeholder: 'script.js --flag' },
+      { key: 'workDir', label: 'Working Directory', type: 'folder', placeholder: '/path/to/dir' },
     ],
   },
   {
     type: 'action_log',
     category: 'action',
     name: 'Log',
-    icon: 'custom',
+    icon: '📋',
     color: '#3b82f6',
     description: 'Log message to console',
     inputs: [{ id: 'in', type: 'input' }],
     outputs: [{ id: 'out', type: 'output', label: 'Done' }],
     defaultData: { message: '', level: 'info' },
     fields: [
-      { 
-        key: 'message', 
-        label: 'Message', 
-        type: 'textarea', 
-        placeholder: 'Log: {{output}}', 
-        required: true 
-      },
-      { 
-        key: 'level', 
-        label: 'Level', 
-        type: 'select', 
-        options: [
-          { value: 'info', label: 'Info' },
-          { value: 'warn', label: 'Warning' },
-          { value: 'error', label: 'Error' },
-        ]
-      },
+      { key: 'message', label: 'Message', type: 'textarea', placeholder: 'Log: {{output}}', required: true },
+      { key: 'level', label: 'Level', type: 'select', options: [
+        { value: 'info', label: 'Info' },
+        { value: 'warn', label: 'Warning' },
+        { value: 'error', label: 'Error' },
+      ]},
     ],
   },
 ];

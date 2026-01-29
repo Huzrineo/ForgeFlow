@@ -1,28 +1,6 @@
 import { memo } from "react";
 import { Handle, Position } from "@xyflow/react";
-import {
-  FileText,
-  Clock,
-  Webhook,
-  Play,
-  Monitor,
-  FileIcon,
-  Globe,
-  Terminal,
-  Bell,
-  Download,
-  Brain,
-  Sparkles,
-  Tag,
-  Search,
-  PenTool,
-  Wand2,
-  MessageSquare,
-  GitBranch,
-  CheckCircle2,
-  XCircle,
-  Loader2,
-} from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { NodeStatus, NodeCategory } from "@/types/flow";
 
@@ -37,84 +15,155 @@ interface FlowNodeProps {
   selected?: boolean;
 }
 
-const categoryStyles: Record<string, { bg: string; border: string; icon: string; glow: string }> = {
-  trigger: { bg: "bg-emerald-950/30", border: "border-emerald-500/30", icon: "text-emerald-400", glow: "shadow-emerald-500/40" },
-  condition: { bg: "bg-amber-950/30", border: "border-amber-500/30", icon: "text-amber-400", glow: "shadow-amber-500/40" },
-  action: { bg: "bg-blue-950/30", border: "border-blue-500/30", icon: "text-blue-400", glow: "shadow-blue-500/40" },
-  ai: { bg: "bg-purple-950/30", border: "border-purple-500/30", icon: "text-purple-400", glow: "shadow-purple-500/40" },
-  output: { bg: "bg-rose-950/30", border: "border-rose-500/30", icon: "text-rose-400", glow: "shadow-rose-500/40" },
-};
+// Simple square node size for triggers and outputs
+const SIMPLE_NODE_SIZE = 40;
 
-const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-  file: FileText,
-  time: Clock,
-  http: Webhook,
-  manual: Play,
-  system: Monitor,
-  fileOps: FileIcon,
-  api: Globe,
-  shell: Terminal,
-  notify: Bell,
-  export: Download,
-  ai: Brain,
-  summarize: Sparkles,
-  classify: Tag,
-  extract: Search,
-  rewrite: PenTool,
-  generate: Wand2,
-  custom: MessageSquare,
-  condition: GitBranch,
-};
-
-const statusIcons: Record<NodeStatus, React.ReactNode> = {
-  running: <Loader2 className="w-3 h-3 animate-spin text-blue-400" />,
-  success: <CheckCircle2 className="w-3 h-3 text-emerald-400" />,
-  error: <XCircle className="w-3 h-3 text-red-400" />,
-  idle: null,
+const categoryColors: Record<NodeCategory, string> = {
+  trigger: "#10b981", // emerald-500
+  condition: "#f59e0b", // amber-500
+  action: "#3b82f6", // blue-500
+  loop: "#8b5cf6", // violet-500
+  utility: "#6366f1", // indigo-500
+  ai: "#a855f7", // purple-500
+  output: "#ec4899", // pink-500
 };
 
 function FlowNode({ data, selected }: FlowNodeProps) {
-  const styles = categoryStyles[data.category] || categoryStyles.action;
-  const IconComponent = iconMap[data.icon || data.category] || Brain;
   const isRunning = data.status === "running";
   const isSuccess = data.status === "success";
   const isError = data.status === "error";
+  const categoryColor = categoryColors[data.category] || categoryColors.action;
+
+  // Simple square UI for triggers and outputs
+  if (data.category === "trigger" || data.category === "output") {
+    return (
+      <div className="flex flex-col items-center gap-1">
+        {/* Label above */}
+        <span className="text-[9px] font-semibold text-muted-foreground/70">
+          {data.label}
+        </span>
+
+        {/* Square icon node */}
+        <div
+          className={cn(
+            "relative flex items-center justify-center rounded-lg transition-all duration-200 cursor-move select-none",
+            selected && "ring-2 ring-primary ring-offset-2 ring-offset-background",
+            isRunning && "animate-pulse"
+          )}
+          style={{
+            width: SIMPLE_NODE_SIZE,
+            height: SIMPLE_NODE_SIZE,
+            backgroundColor: isSuccess
+              ? "#10b981"
+              : isError
+              ? "#ef4444"
+              : categoryColor,
+            boxShadow: selected
+              ? `0 0 0 2px ${categoryColor}20`
+              : "0 2px 6px rgba(0,0,0,0.25)",
+          }}
+        >
+          {isRunning ? (
+            <Loader2 className="w-5 h-5 text-white animate-spin" />
+          ) : (
+            <span className="text-lg">{data.icon || "●"}</span>
+          )}
+
+          {/* Output port for triggers */}
+          {data.category === "trigger" && (
+            <Handle
+              type="source"
+              position={Position.Right}
+              className="!w-2 !h-2 !-right-1 !border-2"
+              style={{
+                backgroundColor: "#166534",
+                borderColor: categoryColor,
+              }}
+            />
+          )}
+
+          {/* Input port for outputs */}
+          {data.category === "output" && (
+            <Handle
+              type="target"
+              position={Position.Left}
+              className="!w-2 !h-2 !-left-1 !border-2"
+              style={{
+                backgroundColor: "rgba(255,255,255,0.8)",
+                borderColor: categoryColor,
+              }}
+            />
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Card-style UI for all other nodes (actions, conditions, loops, utilities, AI)
+  const cardBg =
+    data.category === "condition"
+      ? "bg-amber-950/30"
+      : data.category === "ai"
+      ? "bg-purple-950/30"
+      : data.category === "loop"
+      ? "bg-violet-950/30"
+      : data.category === "utility"
+      ? "bg-indigo-950/30"
+      : "bg-blue-950/30";
+
+  const cardBorder =
+    data.category === "condition"
+      ? "border-amber-500/30"
+      : data.category === "ai"
+      ? "border-purple-500/30"
+      : data.category === "loop"
+      ? "border-violet-500/30"
+      : data.category === "utility"
+      ? "border-indigo-500/30"
+      : "border-blue-500/30";
+
+  const glowColor =
+    data.category === "condition"
+      ? "shadow-amber-500/40"
+      : data.category === "ai"
+      ? "shadow-purple-500/40"
+      : data.category === "loop"
+      ? "shadow-violet-500/40"
+      : data.category === "utility"
+      ? "shadow-indigo-500/40"
+      : "shadow-blue-500/40";
 
   return (
     <div
       className={cn(
         "px-3 py-2 rounded-lg border min-w-[120px] transition-all duration-200",
-        styles.bg,
-        styles.border,
+        cardBg,
+        cardBorder,
         selected && "ring-2 ring-primary ring-offset-2 ring-offset-background",
-        isRunning && `animate-pulse shadow-lg ${styles.glow}`,
+        isRunning && `animate-pulse shadow-lg ${glowColor}`,
         isSuccess && "shadow-lg shadow-emerald-500/40",
         isError && "shadow-lg shadow-red-500/40"
       )}
     >
-      {data.category !== "trigger" && (
-        <Handle
-          type="target"
-          position={Position.Left}
-          className="!w-2 !h-2 !bg-muted !border !border-foreground/20"
-        />
-      )}
+      <Handle
+        type="target"
+        position={Position.Left}
+        className="!w-2 !h-2 !bg-muted !border !border-foreground/20"
+      />
 
       <div className="flex items-center gap-1.5">
-        <div className={cn("p-1 rounded bg-background/20", styles.icon)}>
-          <IconComponent className="w-3.5 h-3.5" />
-        </div>
+        <span className="text-lg">{data.icon || "●"}</span>
         <span className="text-xs font-medium truncate flex-1">{data.label}</span>
-        {data.status && data.status !== "idle" && statusIcons[data.status]}
+        {isRunning && <Loader2 className="w-3 h-3 animate-spin text-blue-400" />}
+        {isSuccess && <span className="text-emerald-400 text-xs">✓</span>}
+        {isError && <span className="text-red-400 text-xs">✗</span>}
       </div>
 
-      {data.category !== "output" && (
-        <Handle
-          type="source"
-          position={Position.Right}
-          className="!w-2 !h-2 !bg-muted !border !border-foreground/20"
-        />
-      )}
+      <Handle
+        type="source"
+        position={Position.Right}
+        className="!w-2 !h-2 !bg-muted !border !border-foreground/20"
+      />
     </div>
   );
 }

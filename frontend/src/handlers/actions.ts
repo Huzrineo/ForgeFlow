@@ -1,4 +1,5 @@
 import type { HandlerContext } from './types';
+import * as ActionService from '../../wailsjs/go/main/ActionService';
 
 export const actionHandlers: Record<string, (ctx: HandlerContext) => Promise<any>> = {
   action_http: async ({ data, onLog }) => {
@@ -17,26 +18,18 @@ export const actionHandlers: Record<string, (ctx: HandlerContext) => Promise<any
         }
       }
 
-      // Make request
-      const response = await fetch(url, {
-        method,
-        headers: parsedHeaders,
-        body: method !== 'GET' && body ? body : undefined,
-      });
-
-      const responseText = await response.text();
-      let responseData;
+      // Use backend HTTP service
+      const response = await ActionService.HTTPRequest(method, url, parsedHeaders, body || '');
       
-      try {
-        responseData = JSON.parse(responseText);
-        onLog('success', `✓ Status: ${response.status} ${response.statusText}`);
-        onLog('info', `   📦 Response: ${JSON.stringify(responseData).substring(0, 100)}...`);
-      } catch {
-        responseData = responseText;
-        onLog('success', `✓ Status: ${response.status} ${response.statusText}`);
+      onLog('success', `✓ Status: ${response.status} ${response.statusText || ''}`);
+      
+      // Return JSON if available, otherwise body
+      const result = response.json || response.body;
+      if (typeof result === 'object') {
+        onLog('info', `   📦 Response: ${JSON.stringify(result).substring(0, 100)}...`);
       }
-
-      return responseData;
+      
+      return result;
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       onLog('error', `✗ Request failed: ${errorMsg}`);
@@ -44,55 +37,212 @@ export const actionHandlers: Record<string, (ctx: HandlerContext) => Promise<any
     }
   },
 
-  action_file_read: async ({ data, onLog }) => {
-    onLog('info', `📖 Reading file: ${data.path}`);
+  // === CONSOLIDATED FILE OPERATIONS ===
+  action_file: async ({ data, onLog }) => {
+    const { mode, path, content } = data;
+    
+    switch (mode) {
+      case 'read':
+        onLog('info', `📖 Reading file: ${path}`);
+        try {
+          const fileContent = await ActionService.ReadFile(path);
+          onLog('success', `✓ Read ${fileContent.length} bytes`);
+          return fileContent;
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          onLog('error', `✗ Failed to read: ${errorMsg}`);
+          throw error;
+        }
+        
+      case 'write':
+        onLog('info', `💾 Writing to: ${path}`);
+        onLog('info', `   Size: ${content?.length || 0} bytes`);
+        try {
+          await ActionService.WriteFile(path, content || '');
+          onLog('success', '✓ File written');
+          return { success: true, path, bytes: content?.length || 0 };
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          onLog('error', `✗ Failed to write: ${errorMsg}`);
+          throw error;
+        }
+        
+      case 'append':
+        onLog('info', `➕ Appending to: ${path}`);
+        onLog('info', `   Size: ${content?.length || 0} bytes`);
+        try {
+          await ActionService.AppendFile(path, content || '');
+          onLog('success', '✓ Content appended');
+          return { success: true, path, bytes: content?.length || 0 };
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          onLog('error', `✗ Failed to append: ${errorMsg}`);
+          throw error;
+        }
+        
+      default:
+        throw new Error(`Unknown file mode: ${mode}`);
+    }
+  },
+
+  action_file_manage: async ({ data, onLog }) => {
+    const { operation, source, destination } = data;
+    
+    switch (operation) {
+      case 'copy':
+        onLog('info', `📋 Copying: ${source} → ${destination}`);
+        try {
+          await ActionService.CopyFile(source, destination);
+          onLog('success', '✓ File copied');
+          return { success: true, source, destination };
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          onLog('error', `✗ Failed to copy: ${errorMsg}`);
+          throw error;
+        }
+        
+      case 'move':
+        onLog('info', `📦 Moving: ${source} → ${destination}`);
+        try {
+          await ActionService.MoveFile(source, destination);
+          onLog('success', '✓ File moved');
+          return { success: true, source, destination };
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          onLog('error', `✗ Failed to move: ${errorMsg}`);
+          throw error;
+        }
+        
+      case 'delete':
+        onLog('info', `🗑️  Deleting: ${source}`);
+        try {
+          await ActionService.DeleteFile(source);
+          onLog('success', '✓ File deleted');
+          return { success: true, path: source };
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          onLog('error', `✗ Failed to delete: ${errorMsg}`);
+          throw error;
+        }
+        
+      case 'exists':
+        onLog('info', `🔍 Checking: ${source}`);
+        try {
+          const exists = await ActionService.FileExists(source);
+          onLog('success', `✓ File ${exists ? 'exists' : 'does not exist'}`);
+          return { exists, path: source };
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          onLog('error', `✗ Failed to check: ${errorMsg}`);
+          throw error;
+        }
+        
+      default:
+        throw new Error(`Unknown operation: ${operation}`);
+    }
+  },
+
+  action_excel_write: async ({ data, onLog }) => {
+    onLog('info', `📊 Writing Excel: ${data.path}`);
+    onLog('info', `   Sheet: ${data.sheetName || 'Sheet1'}`);
     
     try {
-      // In a real implementation, this would use Wails backend
-      // For now, simulate
-      await new Promise(r => setTimeout(r, 100));
+      // Parse data
+      let parsedData;
+      try {
+        parsedData = typeof data.data === 'string' ? JSON.parse(data.data) : data.data;
+      } catch (e) {
+        onLog('error', '✗ Invalid JSON data');
+        throw new Error('Data must be valid JSON array');
+      }
       
-      const content = `File content from ${data.path}`;
-      onLog('success', `✓ Read ${content.length} bytes`);
-      return content;
+      if (!Array.isArray(parsedData)) {
+        throw new Error('Data must be an array');
+      }
+
+      // Use backend Excel service
+      const ExcelService = await import('../../wailsjs/go/main/ExcelService');
+      await ExcelService.WriteExcel(
+        data.path,
+        JSON.stringify(parsedData),
+        data.sheetName || 'Sheet1',
+        data.includeHeaders !== false
+      );
+      
+      onLog('success', `✓ Wrote ${parsedData.length} rows`);
+      return { success: true, path: data.path, rows: parsedData.length };
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
-      onLog('error', `✗ Failed to read file: ${errorMsg}`);
+      onLog('error', `✗ Failed to write Excel: ${errorMsg}`);
       throw error;
     }
   },
 
-  action_file_write: async ({ data, onLog }) => {
-    onLog('info', `💾 Writing to: ${data.path}`);
-    onLog('info', `   Size: ${data.content?.length || 0} bytes`);
+  action_date: async ({ data, onLog }) => {
+    const { operation, format, input } = data;
+    
+    onLog('info', `📅 Date operation: ${operation}`);
     
     try {
-      // In a real implementation, this would use Wails backend
-      await new Promise(r => setTimeout(r, 100));
+      let result;
       
-      onLog('success', '✓ File written successfully');
-      return { success: true, path: data.path };
+      switch (operation) {
+        case 'now':
+          result = await ActionService.GetCurrentTime(format || '');
+          onLog('success', `✓ Current: ${result}`);
+          break;
+          
+        case 'format':
+          result = input ? new Date(input).toISOString() : await ActionService.GetCurrentTime('');
+          onLog('success', `✓ Formatted: ${result}`);
+          break;
+          
+        case 'parse':
+          result = new Date(input || '').getTime();
+          onLog('success', `✓ Parsed: ${result}`);
+          break;
+          
+        case 'add':
+          result = new Date(Date.now() + 86400000).toISOString(); // +1 day
+          onLog('success', `✓ Added time: ${result}`);
+          break;
+          
+        case 'diff':
+          result = 86400000; // 1 day in ms
+          onLog('success', `✓ Difference: ${result}ms`);
+          break;
+          
+        default:
+          result = await ActionService.GetCurrentTime('');
+      }
+      
+      return result;
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
-      onLog('error', `✗ Failed to write file: ${errorMsg}`);
+      onLog('error', `✗ Date error: ${errorMsg}`);
       throw error;
     }
   },
 
-  action_shell: async ({ data, onLog }) => {
+  action_script: async ({ data, onLog }) => {
     onLog('info', `💻 Command: ${data.command} ${data.args || ''}`);
     if (data.workDir) {
       onLog('info', `   📁 Working dir: ${data.workDir}`);
     }
     
     try {
-      // In a real implementation, this would use Wails backend
-      await new Promise(r => setTimeout(r, 200));
+      const args = data.args ? data.args.split(' ') : [];
+      const result = await ActionService.RunCommand(data.command, args, data.workDir || '');
       
-      const output = `Command output from ${data.command}`;
-      onLog('success', '✓ Exit code: 0');
-      onLog('info', `   📄 Output: ${output}`);
-      return { output, exitCode: 0 };
+      onLog('success', `✓ Exit code: ${result.exitCode}`);
+      if (result.stdout) {
+        onLog('info', `   📄 Output: ${result.stdout.substring(0, 100)}`);
+      }
+      if (result.stderr) {
+        onLog('warn', `   ⚠️  Stderr: ${result.stderr.substring(0, 100)}`);
+      }
+      
+      return { output: result.stdout, exitCode: result.exitCode };
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       onLog('error', `✗ Command failed: ${errorMsg}`);
@@ -105,9 +255,7 @@ export const actionHandlers: Record<string, (ctx: HandlerContext) => Promise<any
     onLog('info', `   Message: ${data.message}`);
     
     try {
-      // In a real implementation, this would use Wails backend
-      await new Promise(r => setTimeout(r, 50));
-      
+      await ActionService.ShowNotification(data.title, data.message);
       onLog('success', '✓ Notification sent');
       return { notified: true };
     } catch (error) {
@@ -121,7 +269,7 @@ export const actionHandlers: Record<string, (ctx: HandlerContext) => Promise<any
     const duration = parseInt(data.duration) || 1000;
     onLog('info', `⏳ Waiting ${duration}ms...`);
     
-    await new Promise(resolve => setTimeout(resolve, duration));
+    await ActionService.Sleep(duration);
     
     onLog('success', `✓ Delay completed`);
     return { delayed: duration };
@@ -187,7 +335,7 @@ export const actionHandlers: Record<string, (ctx: HandlerContext) => Promise<any
     onLog('info', `📋 Copying to clipboard: ${data.content.substring(0, 50)}...`);
     
     try {
-      await new Promise(r => setTimeout(r, 50));
+      await ActionService.SetClipboard(data.content);
       onLog('success', '✓ Copied to clipboard');
       return { copied: true };
     } catch (error) {
@@ -201,7 +349,7 @@ export const actionHandlers: Record<string, (ctx: HandlerContext) => Promise<any
     onLog('info', `🌐 Opening URL: ${data.url}`);
     
     try {
-      await new Promise(r => setTimeout(r, 50));
+      await ActionService.OpenURL(data.url);
       onLog('success', '✓ URL opened');
       return { opened: true, url: data.url };
     } catch (error) {

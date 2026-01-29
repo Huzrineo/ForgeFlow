@@ -1,4 +1,5 @@
 import type { HandlerContext } from './types';
+import * as ActionService from '../../wailsjs/go/main/ActionService';
 
 export const outputHandlers: Record<string, (ctx: HandlerContext) => Promise<any>> = {
   output_file: async ({ data, onLog }) => {
@@ -6,9 +7,7 @@ export const outputHandlers: Record<string, (ctx: HandlerContext) => Promise<any
     onLog('info', `   Size: ${data.content?.length || 0} bytes`);
     
     try {
-      // In a real implementation, this would use Wails backend
-      await new Promise(r => setTimeout(r, 100));
-      
+      await ActionService.WriteFile(data.path, data.content || '');
       onLog('success', '✓ File saved successfully');
       return { success: true, path: data.path };
     } catch (error) {
@@ -23,6 +22,7 @@ export const outputHandlers: Record<string, (ctx: HandlerContext) => Promise<any
     onLog('info', `   Body: ${data.body?.substring(0, 100)}...`);
     
     try {
+      // For webhook responses, this would be handled by the trigger system
       await new Promise(r => setTimeout(r, 50));
       
       onLog('success', '✓ Response sent');
@@ -43,8 +43,7 @@ export const outputHandlers: Record<string, (ctx: HandlerContext) => Promise<any
     onLog('info', `   Message: ${data.message}`);
     
     try {
-      await new Promise(r => setTimeout(r, 50));
-      
+      await ActionService.ShowNotification(data.title, data.message);
       onLog('success', '✓ Notification sent');
       return { notified: true };
     } catch (error) {

@@ -7,6 +7,8 @@ export function DeleteFlow(arg1:string):Promise<void>;
 
 export function ExportFlow(arg1:string):Promise<string>;
 
+export function GetFlow(arg1:string):Promise<string>;
+
 export function ImportFlow(arg1:string):Promise<string>;
 
 export function Init():Promise<void>;
