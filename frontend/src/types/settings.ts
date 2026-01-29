@@ -1,3 +1,10 @@
+export interface EnvironmentVariable {
+  id: string;
+  key: string;
+  value: string;
+  isSecret: boolean;
+}
+
 export interface AIServiceConfig {
   apiKey: string;
   baseUrl?: string;
@@ -33,6 +40,9 @@ export interface AppSettings {
   // Advanced
   debugMode: boolean;
   logLevel: 'error' | 'warn' | 'info' | 'debug';
+
+  // Variables
+  environmentVariables: EnvironmentVariable[];
 }
 
 export const defaultSettings: AppSettings = {
@@ -55,6 +65,7 @@ export const defaultSettings: AppSettings = {
   },
   debugMode: false,
   logLevel: 'info',
+  environmentVariables: [],
 };
 
 export const accentColors = [

@@ -30,6 +30,10 @@ export function Shutdown() {
   return window['go']['main']['TriggerManager']['Shutdown']();
 }
 
+export function StartAllTriggers() {
+  return window['go']['main']['TriggerManager']['StartAllTriggers']();
+}
+
 export function UnregisterClipboardMonitor() {
   return window['go']['main']['TriggerManager']['UnregisterClipboardMonitor']();
 }

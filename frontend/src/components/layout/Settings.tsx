@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
-import { X, Moon, Sun, Palette, Zap, Database, Bell, Shield, Code, RotateCcw, Save, Sparkles, Brain, Globe } from 'lucide-react';
+import { X, Moon, Sun, Palette, Zap, Database, Bell, Shield, Code, RotateCcw, Save, Sparkles, Brain, Globe, Key, Plus, Trash, Eye, EyeOff, List, Info } from 'lucide-react';
 import { useSettingsStore } from '@/stores/settingsStore';
+import { useAIStore } from '@/stores/aiStore';
 import { useDialogStore } from '@/stores/dialogStore';
 import { themes, accentColors } from '@/types/settings';
 import type { AppSettings } from '@/types/settings';
 import { cn } from '@/lib/utils';
 
-type SettingsTab = 'appearance' | 'performance' | 'ai' | 'storage' | 'notifications' | 'security' | 'advanced';
+type SettingsTab = 'appearance' | 'performance' | 'ai' | 'variables' | 'storage' | 'notifications' | 'security' | 'advanced';
 
 interface SettingsProps {
   onClose: () => void;
@@ -64,6 +65,7 @@ export default function Settings({ onClose }: SettingsProps) {
     { id: 'appearance', icon: Palette, label: 'Appearance' },
     { id: 'performance', icon: Zap, label: 'Performance' },
     { id: 'ai', icon: Sparkles, label: 'AI Endpoints' },
+    { id: 'variables', icon: Key, label: 'Variables' },
     { id: 'storage', icon: Database, label: 'Storage' },
     { id: 'notifications', icon: Bell, label: 'Notifications' },
     { id: 'security', icon: Shield, label: 'Security' },
@@ -140,6 +142,9 @@ export default function Settings({ onClose }: SettingsProps) {
               )}
               {activeTab === 'ai' && (
                 <AISettings settings={settings} updateSettings={updateSettings} />
+              )}
+              {activeTab === 'variables' && (
+                <VariablesSettings settings={settings} updateSettings={updateSettings} />
               )}
               {activeTab === 'security' && (
                 <SecuritySettings />
@@ -517,6 +522,8 @@ function SecuritySettings() {
 }
 
 function AISettings({ settings, updateSettings }: SettingsPageProps) {
+  const { models, fetchModels, isLoading: isModelsLoading, errors: modelErrors } = useAIStore();
+
   const updateAIService = (provider: keyof AppSettings['aiServices'], field: string, value: any) => {
     const updatedServices = {
       ...settings.aiServices,
@@ -566,16 +573,28 @@ function AISettings({ settings, updateSettings }: SettingsPageProps) {
             </button>
           </div>
           
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest ml-1">API Key</label>
-            <input
-              type="password"
-              value={settings.aiServices.openai.apiKey}
-              onChange={(e) => updateAIService('openai', 'apiKey', e.target.value)}
-              placeholder="sk-..."
-              className="w-full px-3 py-2 rounded-lg bg-background border border-border focus:ring-1 focus:ring-primary outline-none text-sm transition-all"
-            />
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex-1 space-y-1.5">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest ml-1">API Key</label>
+              <input
+                type="password"
+                value={settings.aiServices.openai.apiKey}
+                onChange={(e) => updateAIService('openai', 'apiKey', e.target.value)}
+                placeholder="sk-..."
+                className="w-full px-3 py-2 rounded-lg bg-background border border-border focus:ring-1 focus:ring-primary outline-none text-sm transition-all"
+              />
+            </div>
+            <div className="pt-5">
+              <button
+                onClick={() => fetchModels('openai')}
+                disabled={isModelsLoading.openai || !settings.aiServices.openai.apiKey}
+                className="px-3 py-2 rounded-lg border border-border bg-muted/30 hover:bg-muted text-[10px] font-bold uppercase transition-all disabled:opacity-50"
+              >
+                {isModelsLoading.openai ? '...' : `Refresh (${models.openai.length})`}
+              </button>
+            </div>
           </div>
+          {modelErrors.openai && <div className="text-[10px] text-rose-500 font-medium ml-1">{modelErrors.openai}</div>}
         </div>
 
         {/* Groq */}
@@ -603,16 +622,28 @@ function AISettings({ settings, updateSettings }: SettingsPageProps) {
             </button>
           </div>
           
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest ml-1">API Key</label>
-            <input
-              type="password"
-              value={settings.aiServices.groq.apiKey}
-              onChange={(e) => updateAIService('groq', 'apiKey', e.target.value)}
-              placeholder="gsk_..."
-              className="w-full px-3 py-2 rounded-lg bg-background border border-border focus:ring-1 focus:ring-primary outline-none text-sm transition-all"
-            />
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex-1 space-y-1.5">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest ml-1">API Key</label>
+              <input
+                type="password"
+                value={settings.aiServices.groq.apiKey}
+                onChange={(e) => updateAIService('groq', 'apiKey', e.target.value)}
+                placeholder="gsk_..."
+                className="w-full px-3 py-2 rounded-lg bg-background border border-border focus:ring-1 focus:ring-primary outline-none text-sm transition-all"
+              />
+            </div>
+            <div className="pt-5">
+              <button
+                onClick={() => fetchModels('groq')}
+                disabled={isModelsLoading.groq || !settings.aiServices.groq.apiKey}
+                className="px-3 py-2 rounded-lg border border-border bg-muted/30 hover:bg-muted text-[10px] font-bold uppercase transition-all disabled:opacity-50"
+              >
+                {isModelsLoading.groq ? '...' : `Refresh (${models.groq.length})`}
+              </button>
+            </div>
           </div>
+          {modelErrors.groq && <div className="text-[10px] text-rose-500 font-medium ml-1">{modelErrors.groq}</div>}
         </div>
 
         {/* OpenRouter */}
@@ -640,16 +671,28 @@ function AISettings({ settings, updateSettings }: SettingsPageProps) {
             </button>
           </div>
           
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest ml-1">API Key</label>
-            <input
-              type="password"
-              value={settings.aiServices.openrouter.apiKey}
-              onChange={(e) => updateAIService('openrouter', 'apiKey', e.target.value)}
-              placeholder="sk-or-v1-..."
-              className="w-full px-3 py-2 rounded-lg bg-background border border-border focus:ring-1 focus:ring-primary outline-none text-sm transition-all"
-            />
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex-1 space-y-1.5">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest ml-1">API Key</label>
+              <input
+                type="password"
+                value={settings.aiServices.openrouter.apiKey}
+                onChange={(e) => updateAIService('openrouter', 'apiKey', e.target.value)}
+                placeholder="sk-or-v1-..."
+                className="w-full px-3 py-2 rounded-lg bg-background border border-border focus:ring-1 focus:ring-primary outline-none text-sm transition-all"
+              />
+            </div>
+            <div className="pt-5">
+              <button
+                onClick={() => fetchModels('openrouter')}
+                disabled={isModelsLoading.openrouter || !settings.aiServices.openrouter.apiKey}
+                className="px-3 py-2 rounded-lg border border-border bg-muted/30 hover:bg-muted text-[10px] font-bold uppercase transition-all disabled:opacity-50"
+              >
+                {isModelsLoading.openrouter ? '...' : `Refresh (${models.openrouter.length})`}
+              </button>
+            </div>
           </div>
+          {modelErrors.openrouter && <div className="text-[10px] text-rose-500 font-medium ml-1">{modelErrors.openrouter}</div>}
         </div>
 
         {/* Custom OpenAI Compatible */}
@@ -760,6 +803,143 @@ function AdvancedSettings({ settings, updateSettings }: SettingsPageProps) {
   );
 }
 
+function VariablesSettings({ settings, updateSettings }: SettingsPageProps) {
+  const [showValues, setShowValues] = useState<Record<string, boolean>>({});
+
+  const addVariable = () => {
+    const newVar = {
+      id: crypto.randomUUID(),
+      key: '',
+      value: '',
+      isSecret: false,
+    };
+    updateSettings('environmentVariables', [...(settings.environmentVariables || []), newVar]);
+  };
+
+  const removeVariable = (id: string) => {
+    updateSettings('environmentVariables', settings.environmentVariables.filter(v => v.id !== id));
+  };
+
+  const updateVariable = (id: string, field: string, value: any) => {
+    updateSettings('environmentVariables', settings.environmentVariables.map(v => 
+      v.id === id ? { ...v, [field]: value } : v
+    ));
+  };
+
+  const toggleValueVisibility = (id: string) => {
+    setShowValues(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  return (
+    <>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+            <Key className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold">Variables & Secrets</h3>
+            <p className="text-xs text-muted-foreground">Global variables for your workflows</p>
+          </div>
+        </div>
+        <button
+          onClick={addVariable}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-bold uppercase transition-all hover:scale-105 active:scale-95"
+        >
+          <Plus className="w-4 h-4" />
+          Add Variable
+        </button>
+      </div>
+
+      <div className="space-y-4">
+        {!settings.environmentVariables || settings.environmentVariables.length === 0 ? (
+          <div className="p-8 border border-dashed border-border rounded-xl bg-muted/20 text-center">
+            <List className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
+            <p className="text-sm text-muted-foreground">No variables defined yet.</p>
+            <p className="text-xs text-muted-foreground/50 mt-1">Variables can be used in nodes using {"{{VARIABLE_NAME}}"}</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {settings.environmentVariables.map((variable) => (
+              <div key={variable.id} className="p-4 rounded-xl border border-border bg-muted/20 space-y-4 group">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex-1 space-y-1.5">
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest ml-1">KEY</label>
+                    <input
+                      type="text"
+                      value={variable.key}
+                      onChange={(e) => updateVariable(variable.id, 'key', e.target.value)}
+                      placeholder="MY_API_KEY"
+                      className="w-full px-3 py-2 rounded-lg bg-background border border-border focus:ring-1 focus:ring-primary outline-none text-sm font-mono transition-all"
+                    />
+                  </div>
+                  <div className="pt-5">
+                    <button
+                      onClick={() => removeVariable(variable.id)}
+                      className="p-2 text-muted-foreground hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
+                    >
+                      <Trash className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex-1 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest ml-1">VALUE</label>
+                      <button 
+                        onClick={() => updateVariable(variable.id, 'isSecret', !variable.isSecret)}
+                        className={cn(
+                          "text-[9px] font-bold uppercase px-1.5 py-0.5 rounded border transition-all",
+                          variable.isSecret 
+                            ? "bg-amber-500/10 text-amber-500 border-amber-500/20" 
+                            : "bg-muted text-muted-foreground border-border"
+                        )}
+                      >
+                        {variable.isSecret ? '🔒 Secret' : '📄 Public'}
+                      </button>
+                    </div>
+                    <div className="relative">
+                      <input
+                        type={variable.isSecret && !showValues[variable.id] ? "password" : "text"}
+                        value={variable.value}
+                        onChange={(e) => updateVariable(variable.id, 'value', e.target.value)}
+                        placeholder="Value..."
+                        className="w-full px-3 py-2 pr-10 rounded-lg bg-background border border-border focus:ring-1 focus:ring-primary outline-none text-sm transition-all"
+                      />
+                      {variable.isSecret && (
+                        <button
+                          onClick={() => toggleValueVisibility(variable.id)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        >
+                          {showValues[variable.id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-8 p-4 rounded-lg bg-primary/5 border border-primary/10">
+        <div className="flex items-start gap-3">
+          <Info className="w-5 h-5 text-primary mt-0.5" />
+          <div className="space-y-1">
+            <p className="text-sm font-semibold">Usage Tip</p>
+            <p className="text-xs text-muted-foreground">
+              You can reference these variables anywhere in your workflow using double curly braces, 
+              for example: <code className="bg-muted px-1 rounded text-primary">{"{{MY_VARIABLE}}"}</code>.
+            </p>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 interface ToggleSettingProps {
   icon: React.ReactNode;
   title: string;
@@ -798,3 +978,4 @@ function ToggleSetting({ icon, title, description, checked, onChange }: ToggleSe
     </div>
   );
 }
+

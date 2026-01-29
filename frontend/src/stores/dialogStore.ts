@@ -11,8 +11,9 @@ interface DialogState {
   // Confirm Dialog
   confirmOpen: boolean;
   confirmOptions: ConfirmDialogOptions | null;
-  confirm: (options: ConfirmDialogOptions) => void;
-  closeConfirm: () => void;
+  confirmResolver: ((value: boolean) => void) | null;
+  confirm: (options: ConfirmDialogOptions) => Promise<boolean>;
+  closeConfirm: (result: boolean) => void;
   
   // Context Menu
   contextMenuOpen: boolean;
@@ -21,7 +22,7 @@ interface DialogState {
   closeContextMenu: () => void;
 }
 
-export const useDialogStore = create<DialogState>()((set) => ({
+export const useDialogStore = create<DialogState>()((set, get) => ({
   // Dialog
   dialogOpen: false,
   dialogOptions: null,
@@ -36,8 +37,24 @@ export const useDialogStore = create<DialogState>()((set) => ({
   // Confirm Dialog
   confirmOpen: false,
   confirmOptions: null,
-  confirm: (options) => set({ confirmOpen: true, confirmOptions: options }),
-  closeConfirm: () => set({ confirmOpen: false, confirmOptions: null }),
+  confirmResolver: null,
+  confirm: (options) => {
+    return new Promise((resolve) => {
+      set({ 
+        confirmOpen: true, 
+        confirmOptions: options,
+        confirmResolver: resolve 
+      });
+    });
+  },
+  closeConfirm: (result) => {
+    const { confirmResolver, confirmOptions } = get();
+    if (result) confirmOptions?.onConfirm?.();
+    else confirmOptions?.onCancel?.();
+    
+    if (confirmResolver) confirmResolver(result);
+    set({ confirmOpen: false, confirmOptions: null, confirmResolver: null });
+  },
   
   // Context Menu
   contextMenuOpen: false,

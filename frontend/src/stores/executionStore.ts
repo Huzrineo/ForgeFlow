@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { FlowExecution } from "@/types/flow";
-import { ListExecutions, DeleteExecution } from "../../wailsjs/go/main/Storage";
+import { ListExecutions, DeleteExecution, SaveExecution } from "../../wailsjs/go/main/Storage";
 
 interface ExecutionState {
   executions: FlowExecution[];
@@ -8,6 +8,7 @@ interface ExecutionState {
   isLoading: boolean;
   
   loadExecutions: () => Promise<void>;
+  addExecution: (execution: FlowExecution) => Promise<void>;
   deleteExecution: (execId: string) => Promise<void>;
   clearExecutions: () => Promise<void>;
   setSelectedExecution: (execution: FlowExecution | null) => void;
@@ -23,7 +24,6 @@ export const useExecutionStore = create<ExecutionState>()((set, get) => ({
     try {
       const executions = await ListExecutions(100);
       
-      // Calculate stats for each execution
       const processedExecutions = executions.map((exec: any) => {
         const successCount = exec.results?.filter((r: any) => r.status === "success").length || 0;
         const errorCount = exec.results?.filter((r: any) => r.status === "error").length || 0;
@@ -41,6 +41,15 @@ export const useExecutionStore = create<ExecutionState>()((set, get) => ({
     } catch (error) {
       console.error("Failed to load executions:", error);
       set({ isLoading: false });
+    }
+  },
+
+  addExecution: async (execution: FlowExecution) => {
+    try {
+      await SaveExecution(JSON.stringify(execution));
+      await get().loadExecutions();
+    } catch (error) {
+      console.error("Failed to save execution:", error);
     }
   },
 

@@ -2,6 +2,7 @@ import { X, Settings, Info } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { CronField, HotkeyField, FilePickerField, FolderPickerField } from "@/components/ui/fields";
 import { useFlowStore } from "@/stores/flowStore";
+import { useAIStore } from "@/stores/aiStore";
 import { cn } from "@/lib/utils";
 import type { NodeCategory } from "@/types/flow";
 import { getNodeDefinition } from "@/nodes";
@@ -35,6 +36,7 @@ interface NodeSettingsProps {
 
 export default function NodeSettings({ selectedNodeId, onClose }: NodeSettingsProps) {
   const { nodes, updateNodeData } = useFlowStore();
+  const { models, fetchModels, isLoading: isModelsLoading } = useAIStore();
   const selectedNode = nodes.find((n) => n.id === selectedNodeId);
   
   if (!selectedNode) return null;
@@ -252,29 +254,51 @@ export default function NodeSettings({ selectedNodeId, onClose }: NodeSettingsPr
 
                   {field.type === "model-select" && (
                     <div className="space-y-1.5">
-                      <input
-                        type="text"
-                        value={String(config[field.key] ?? "")}
-                        onChange={(e) => handleConfigChange(field.key, e.target.value)}
-                        placeholder={config.provider === 'groq' ? 'llama3-8b-8192' : config.provider === 'openrouter' ? 'google/gemini-flash-1.5' : 'gpt-4o-mini'}
-                        className="w-full px-2.5 py-1.5 rounded-md border border-border bg-background text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all"
-                      />
-                      <div className="flex flex-wrap gap-1">
-                        {(config.provider === 'groq' 
-                          ? ['llama3-8b-8192', 'llama3-70b-8192', 'mixtral-8x7b-32768', 'gemma-7b-it'] 
-                          : config.provider === 'openrouter'
-                          ? ['google/gemini-flash-1.5', 'anthropic/claude-3.5-sonnet', 'meta-llama/llama-3-70b-instruct']
-                          : ['gpt-4o-mini', 'gpt-4o', 'gpt-3.5-turbo']
-                        ).map(m => (
-                          <button 
-                            key={m}
+                      <div className="relative">
+                        <input
+                          type="text"
+                          list={`models-${field.key}-${selectedNode.id}`}
+                          value={String(config[field.key] ?? "")}
+                          onChange={(e) => handleConfigChange(field.key, e.target.value)}
+                          placeholder={config.provider === 'groq' ? 'llama3-8b-8192' : config.provider === 'openrouter' ? 'google/gemini-flash-1.5' : 'gpt-4o-mini'}
+                          className="w-full px-2.5 py-1.5 rounded-md border border-border bg-background text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all"
+                        />
+                        <datalist id={`models-${field.key}-${selectedNode.id}`}>
+                          {(models[config.provider as keyof typeof models] || []).map(m => (
+                            <option key={m.id} value={m.id}>{m.name}</option>
+                          ))}
+                        </datalist>
+                      </div>
+                      
+                      <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto p-0.5 custom-scrollbar">
+                        {isModelsLoading[config.provider as keyof typeof isModelsLoading] ? (
+                          <div className="text-[9px] text-muted-foreground animate-pulse py-1">Loading models...</div>
+                        ) : (models[config.provider as keyof typeof models] || []).length > 0 ? (
+                          (models[config.provider as keyof typeof models] || []).slice(0, 10).map(m => (
+                            <button 
+                              key={m.id}
+                              type="button"
+                              onClick={() => handleConfigChange(field.key, m.id)}
+                              className={cn(
+                                "px-1.5 py-0.5 rounded text-[9px] border transition-colors",
+                                config[field.key] === m.id
+                                  ? "bg-primary/20 border-primary/40 text-primary"
+                                  : "bg-muted/50 hover:bg-muted text-muted-foreground border-border"
+                              )}
+                              title={m.name}
+                            >
+                              {m.name.split('/').pop()}
+                            </button>
+                          ))
+                        ) : (
+                          <button
                             type="button"
-                            onClick={() => handleConfigChange(field.key, m)}
-                            className="px-1.5 py-0.5 rounded bg-muted/50 hover:bg-muted text-[9px] text-muted-foreground border border-border transition-colors"
+                            onClick={() => fetchModels(config.provider as any)}
+                            className="text-[9px] text-primary hover:underline"
                           >
-                            {m.split('/').pop()}
+                            Load Models
                           </button>
-                        ))}
+                        )}
                       </div>
                     </div>
                   )}

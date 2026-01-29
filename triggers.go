@@ -390,6 +390,97 @@ func (tm *TriggerManager) startWebhookServer() {
 	}
 }
 
+// StartAllTriggers loads all flows and registers their enabled triggers
+func (tm *TriggerManager) StartAllTriggers() error {
+	flows, err := tm.storage.ListFlows()
+	if err != nil {
+		return fmt.Errorf("failed to list flows for trigger startup: %w", err)
+	}
+
+	fmt.Printf("🔍 Starting triggers for %d flows...\n", len(flows))
+
+	for _, f := range flows {
+		flowID, _ := f["id"].(string)
+		if flowID == "" {
+			continue
+		}
+
+		flowJSON, err := tm.storage.GetFlow(flowID)
+		if err != nil {
+			fmt.Printf("⚠️ Failed to load flow %s: %v\n", flowID, err)
+			continue
+		}
+
+		var flow map[string]interface{}
+		if err := json.Unmarshal([]byte(flowJSON), &flow); err != nil {
+			continue
+		}
+
+		nodes, ok := flow["nodes"].([]interface{})
+		if !ok {
+			continue
+		}
+
+		for _, n := range nodes {
+			node, ok := n.(map[string]interface{})
+			if !ok {
+				continue
+			}
+
+			data, ok := node["data"].(map[string]interface{})
+			if !ok {
+				continue
+			}
+
+			category, _ := data["category"].(string)
+			if category != "trigger" {
+				continue
+			}
+
+			nodeType, _ := data["nodeType"].(string)
+			config, _ := data["config"].(map[string]interface{})
+			if config == nil {
+				config = make(map[string]interface{})
+			}
+
+			// Skip if explicitly disabled
+			if enabled, exists := config["enabled"].(bool); exists && !enabled {
+				continue
+			}
+
+			// Register based on type
+			switch nodeType {
+			case "trigger_schedule":
+				if cron, ok := config["cron"].(string); ok && cron != "" {
+					tm.RegisterScheduleTrigger(flowID, cron)
+				}
+			case "trigger_webhook":
+				path, _ := config["path"].(string)
+				method, _ := config["method"].(string)
+				if path != "" {
+					if method == "" {
+						method = "POST"
+					}
+					tm.RegisterWebhookTrigger(flowID, path, method)
+				}
+			case "trigger_file_watch":
+				path, _ := config["path"].(string)
+				events, _ := config["events"].(string)
+				if path != "" {
+					if events == "" {
+						events = "all"
+					}
+					tm.RegisterFileWatcher(flowID, path, events)
+				}
+			case "trigger_clipboard":
+				tm.RegisterClipboardMonitor(flowID, true)
+			}
+		}
+	}
+
+	return nil
+}
+
 // GetActiveTriggers returns information about active triggers
 func (tm *TriggerManager) GetActiveTriggers() map[string]interface{} {
 	tm.mu.RLock()

@@ -14,7 +14,7 @@ export interface ConfirmDialogOptions {
   confirmText?: string;
   cancelText?: string;
   variant?: 'default' | 'danger';
-  onConfirm: () => void | Promise<void>;
+  onConfirm?: () => void | Promise<void>;
   onCancel?: () => void;
 }
 

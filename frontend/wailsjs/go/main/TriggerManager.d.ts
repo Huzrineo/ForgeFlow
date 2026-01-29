@@ -15,6 +15,8 @@ export function RegisterWebhookTrigger(arg1:string,arg2:string,arg3:string):Prom
 
 export function Shutdown():Promise<void>;
 
+export function StartAllTriggers():Promise<void>;
+
 export function UnregisterClipboardMonitor():Promise<void>;
 
 export function UnregisterFileWatcher(arg1:string):Promise<void>;

@@ -49,4 +49,23 @@ export const conditionNodes: NodeDefinition[] = [
       }
     ],
   },
+  {
+    type: 'condition_manual_approval',
+    category: 'condition',
+    name: 'Manual Approval',
+    icon: '👤',
+    color: '#f59e0b',
+    description: 'Wait for user approval',
+    inputs: [{ id: 'in', type: 'input' }],
+    outputs: [
+      { id: 'true', type: 'output', label: 'Approved' },
+      { id: 'false', type: 'output', label: 'Denied' }
+    ],
+    defaultData: { title: 'Approval Required', message: 'Please approve this action to continue.' },
+    fields: [
+      { key: 'title', label: 'Dialog Title', type: 'text', placeholder: 'Approval Required' },
+      { key: 'message', label: 'Dialog Message', type: 'textarea', placeholder: '{{message}}' },
+    ],
+  },
 ];
+

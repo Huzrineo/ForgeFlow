@@ -23,6 +23,7 @@ interface FlowState {
   sidebarCollapsed: boolean;
   isRunning: boolean;
   executionId: string | null;
+  executor: WorkflowExecutor | null;
   selectedNodeId: string | null;
   settingsOpen: boolean;
   theme: string;
@@ -75,6 +76,7 @@ export const useFlowStore = create<FlowState>()(
       sidebarCollapsed: false,
       isRunning: false,
       executionId: null,
+      executor: null,
       selectedNodeId: null,
       settingsOpen: false,
       theme: "vscode",
@@ -374,6 +376,7 @@ export const useFlowStore = create<FlowState>()(
         };
 
         const executor = new WorkflowExecutor(nodes, edges, onProgress, onLog);
+        set({ isRunning: true, executionId, executor });
         const startedAt = new Date().toISOString();
         let finalStatus: "success" | "error" = "success";
 
@@ -424,12 +427,15 @@ export const useFlowStore = create<FlowState>()(
             console.error("Failed to save execution history:", error);
           }
           
-          set({ isRunning: false, executionId: null });
+          set({ isRunning: false, executionId: null, executor: null });
         }
       },
 
       stopFlow: async () => {
-        const { executionId } = get();
+        const { executionId, executor } = get();
+        if (executor) {
+          executor.abort();
+        }
         if (executionId) {
           try {
             await StopExecution(executionId);
@@ -437,7 +443,7 @@ export const useFlowStore = create<FlowState>()(
             console.error("Failed to stop execution:", error);
           }
         }
-        set({ isRunning: false, executionId: null });
+        set({ isRunning: false, executionId: null, executor: null });
       },
 
       setSelectedNodeId: (nodeId) => set({ selectedNodeId: nodeId }),

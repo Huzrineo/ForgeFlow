@@ -3,6 +3,7 @@ import type { FlowNode, FlowEdge } from '@/types/flow';
 import { getHandler } from '@/handlers';
 import type { LogCallback, HandlerContext } from '@/handlers/types';
 import { useSettingsStore } from '@/stores/settingsStore';
+import { useDialogStore } from '@/stores/dialogStore';
 
 export interface NodeResult {
   nodeId: string;
@@ -20,6 +21,7 @@ export class WorkflowExecutor {
   private nodeResults: Map<string, NodeResult> = new Map();
   private onProgress: (results: NodeResult[]) => void;
   private onLog: LogCallback;
+  private isAborted: boolean = false;
 
   constructor(
     nodes: FlowNode[],
@@ -31,6 +33,24 @@ export class WorkflowExecutor {
     this.edges = edges;
     this.onProgress = onProgress;
     this.onLog = onLog;
+
+    // Load global environment variables from settings
+    const settings = useSettingsStore.getState().settings;
+    if (settings.environmentVariables) {
+      settings.environmentVariables.forEach(v => {
+        if (v.key) {
+          this.variables[v.key] = v.value;
+          // Also provide under env namespace
+          if (!this.variables.env) this.variables.env = {};
+          this.variables.env[v.key] = v.value;
+        }
+      });
+    }
+  }
+
+  abort(): void {
+    this.isAborted = true;
+    this.onLog('warn', '🛑 Execution aborted by user');
   }
 
   async execute(): Promise<void> {
@@ -59,6 +79,8 @@ export class WorkflowExecutor {
   }
 
   private async executeNode(nodeId: string): Promise<any> {
+    if (this.isAborted) return null;
+
     const node = this.nodes.find(n => n.id === nodeId);
     if (!node) return null;
 
@@ -103,29 +125,165 @@ export class WorkflowExecutor {
 
       // Execute connected nodes
       const outgoing = this.edges.filter(e => e.source === nodeId);
+      const nodeType = node.data.nodeType;
 
-      for (const edge of outgoing) {
-        // Handle conditional branching
-        if (node.data.nodeType === 'condition_if') {
-          // For if/else, check which output port was used
-          const shouldExecute =
-            (edge.sourceHandle === 'true' && output === true) ||
-            (edge.sourceHandle === 'false' && output === false);
+      // === 1. Handle Loops ===
+      if (nodeType === 'loop_foreach') {
+        const { items, itemVar, indexVar } = output;
+        const loopEdges = outgoing.filter(e => e.sourceHandle === 'loop');
+        const doneEdges = outgoing.filter(e => e.sourceHandle === 'done');
+
+        if (Array.isArray(items)) {
+          for (let i = 0; i < items.length; i++) {
+            if (this.isAborted) break;
+            this.variables[itemVar || 'item'] = items[i];
+            this.variables[indexVar || 'index'] = i;
+            this.onLog('info', `🔄 [Loop] Iteration ${i + 1}/${items.length}`, nodeId);
+            
+            for (const edge of loopEdges) {
+              await this.executeNode(edge.target);
+            }
+          }
+        }
+        
+        for (const edge of doneEdges) {
+          await this.executeNode(edge.target);
+        }
+        return output;
+      }
+
+      if (nodeType === 'loop_repeat') {
+        const { count, indexVar } = output;
+        const loopEdges = outgoing.filter(e => e.sourceHandle === 'loop');
+        const doneEdges = outgoing.filter(e => e.sourceHandle === 'done');
+        const iterations = parseInt(count) || 0;
+
+        for (let i = 0; i < iterations; i++) {
+          if (this.isAborted) break;
+          this.variables[indexVar || 'i'] = i;
+          this.onLog('info', `🔢 [Repeat] Iteration ${i + 1}/${iterations}`, nodeId);
           
-          if (shouldExecute) {
-            this.onLog('info', `🔀 Taking ${edge.sourceHandle} branch`, nodeId);
+          for (const edge of loopEdges) {
             await this.executeNode(edge.target);
           }
-        } else if (node.data.nodeType === 'condition_switch') {
-          // For switch, check if output matches the case
-          if (edge.sourceHandle === output || edge.sourceHandle === 'default') {
-            this.onLog('info', `🔀 Taking ${edge.sourceHandle} branch`, nodeId);
+        }
+        
+        for (const edge of doneEdges) {
+          await this.executeNode(edge.target);
+        }
+        return output;
+      }
+
+      if (nodeType === 'loop_while') {
+        const { maxIterations } = output;
+        const loopEdges = outgoing.filter(e => e.sourceHandle === 'loop');
+        const doneEdges = outgoing.filter(e => e.sourceHandle === 'done');
+        const max = parseInt(maxIterations) || 100;
+
+        let iter = 0;
+        while (iter < max) {
+          if (this.isAborted) break;
+          // Re-evaluate condition
+          const rawCondition = (node.data.config as any)?.condition || '';
+          const currentCondition = this.interpolateString(rawCondition);
+          
+          let result = false;
+          try {
+            // Note: Simple eval for now. In production, use a safe evaluator.
+            result = !!eval(currentCondition);
+          } catch (e) {
+            this.onLog('error', `❌ Loop condition error: ${e}`, nodeId);
+            break;
+          }
+
+          if (!result) {
+            this.onLog('info', `⏹️ Loop condition met (false)`, nodeId);
+            break;
+          }
+
+          this.onLog('info', `🔁 [While] Iteration ${iter + 1}`, nodeId);
+          for (const edge of loopEdges) {
+            await this.executeNode(edge.target);
+          }
+          iter++;
+        }
+        
+        for (const edge of doneEdges) {
+          await this.executeNode(edge.target);
+        }
+        return output;
+      }
+
+      if (nodeType === 'condition_manual_approval') {
+        const { title, message } = output;
+        this.onLog('info', `⏳ Waiting for manual approval: ${title}`, nodeId);
+        this.updateNodeResult(nodeId, { status: 'pending' });
+
+        try {
+          // Open confirm dialog and wait for response
+          const approved = await useDialogStore.getState().confirm({
+            title: title || 'Approval Required',
+            message: message || 'Please approve to continue execution.',
+            confirmText: 'Approve',
+            cancelText: 'Deny',
+            variant: 'default',
+          });
+
+          this.updateNodeResult(nodeId, { status: 'running' });
+          
+          if (approved) {
+            this.onLog('success', '✅ Approved by user', nodeId);
+          } else {
+            this.onLog('warn', '🛑 Denied by user', nodeId);
+          }
+
+          const branch = approved ? 'true' : 'false';
+          const branchEdges = outgoing.filter(e => e.sourceHandle === branch);
+          for (const edge of branchEdges) {
+            await this.executeNode(edge.target);
+          }
+          return approved;
+        } catch (error) {
+          this.onLog('error', `❌ Approval failed: ${error}`, nodeId);
+          return false;
+        }
+      }
+
+      // === 2. Handle Conditional Branching ===
+      if (nodeType === 'condition_if') {
+        const branch = output === true ? 'true' : 'false';
+        const branchEdges = outgoing.filter(e => e.sourceHandle === branch);
+        
+        this.onLog('info', `🔀 Taking ${branch} branch`, nodeId);
+        for (const edge of branchEdges) {
+          await this.executeNode(edge.target);
+        }
+        return output;
+      }
+
+      if (nodeType === 'condition_switch') {
+        const matchingEdges = outgoing.filter(e => e.sourceHandle === String(output));
+        
+        if (matchingEdges.length > 0) {
+          this.onLog('info', `🔀 Taking branch: ${output}`, nodeId);
+          for (const edge of matchingEdges) {
             await this.executeNode(edge.target);
           }
         } else {
-          // Normal execution
-          await this.executeNode(edge.target);
+          const defaultEdges = outgoing.filter(e => e.sourceHandle === 'default');
+          if (defaultEdges.length > 0) {
+            this.onLog('info', `🔀 Taking default branch`, nodeId);
+            for (const edge of defaultEdges) {
+              await this.executeNode(edge.target);
+            }
+          }
         }
+        return output;
+      }
+
+      // === 3. Normal Sequential Execution ===
+      for (const edge of outgoing) {
+        await this.executeNode(edge.target);
       }
 
       return output;

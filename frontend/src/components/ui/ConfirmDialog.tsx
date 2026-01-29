@@ -41,15 +41,16 @@ export default function ConfirmDialog() {
     confirmText = 'Confirm',
     cancelText = 'Cancel',
     variant = 'default',
-    onConfirm,
-    onCancel,
   } = confirmOptions;
 
   const handleConfirm = async () => {
     setIsLoading(true);
     try {
-      await onConfirm();
-      closeConfirm();
+      // If confirmOptions includes an onConfirm that returns a promise, wait for it
+      if (confirmOptions.onConfirm) {
+        await confirmOptions.onConfirm();
+      }
+      closeConfirm(true);
     } catch (error) {
       console.error('Confirm action failed:', error);
     } finally {
@@ -58,8 +59,7 @@ export default function ConfirmDialog() {
   };
 
   const handleCancel = () => {
-    onCancel?.();
-    closeConfirm();
+    closeConfirm(false);
   };
 
   const handleOverlayClick = (e: React.MouseEvent) => {

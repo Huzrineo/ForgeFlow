@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"embed"
+	"fmt"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -20,6 +21,15 @@ func main() {
 	triggerManager := NewTriggerManager(engine, storage)
 	actionService := NewActionService(app)
 	excelService := NewExcelService()
+
+	// Initialise storage and start all triggers
+	storage.Init()
+	go func() {
+		err := triggerManager.StartAllTriggers()
+		if err != nil {
+			fmt.Printf("Error starting triggers: %v\n", err)
+		}
+	}()
 
 	err := wails.Run(&options.App{
 		Title:             "ForgeFlow",
@@ -54,7 +64,7 @@ func main() {
 			WindowIsTranslucent:  false,
 			Theme:                windows.Dark,
 			CustomTheme: &windows.ThemeSettings{
-				DarkModeTitleBar:   windows.RGB(30, 30, 30),   // #1e1e1e
+				DarkModeTitleBar:   windows.RGB(30, 30, 30),    // #1e1e1e
 				DarkModeTitleText:  windows.RGB(212, 212, 212), // #d4d4d4
 				DarkModeBorder:     windows.RGB(62, 62, 66),    // #3e3e42
 				LightModeTitleBar:  windows.RGB(30, 30, 30),
