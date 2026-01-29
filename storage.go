@@ -266,3 +266,25 @@ func (s *Storage) ImportFlow(flowJSON string) (string, error) {
 
 	return flow.ID, nil
 }
+
+func (s *Storage) getSecretsDir() string {
+	secretsDir := filepath.Join(s.dataDir, "secrets")
+	os.MkdirAll(secretsDir, 0700)
+	return secretsDir
+}
+
+func (s *Storage) SaveSecret(key, value string) error {
+	s.Init()
+	filePath := filepath.Join(s.getSecretsDir(), key)
+	return os.WriteFile(filePath, []byte(value), 0600)
+}
+
+func (s *Storage) GetSecret(key string) (string, error) {
+	s.Init()
+	filePath := filepath.Join(s.getSecretsDir(), key)
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}

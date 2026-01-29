@@ -9,6 +9,8 @@ export function ExportFlow(arg1:string):Promise<string>;
 
 export function GetFlow(arg1:string):Promise<string>;
 
+export function GetSecret(arg1:string):Promise<string>;
+
 export function ImportFlow(arg1:string):Promise<string>;
 
 export function Init():Promise<void>;
@@ -24,5 +26,7 @@ export function LoadSettings():Promise<string>;
 export function SaveExecution(arg1:string):Promise<void>;
 
 export function SaveFlow(arg1:string):Promise<string>;
+
+export function SaveSecret(arg1:string,arg2:string):Promise<void>;
 
 export function SaveSettings(arg1:string):Promise<void>;

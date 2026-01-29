@@ -493,4 +493,173 @@ export const actionHandlers: Record<string, (ctx: HandlerContext) => Promise<any
     
     return { logged: true, message, level };
   },
+
+  // === NEW ACTIONS ===
+  action_file_list: async ({ data, onLog }) => {
+    const { path, pattern, recursive, include } = data;
+    onLog('info', `📁 Listing directory: ${path}`);
+    if (pattern && pattern !== '*') onLog('info', `   Filter: ${pattern}`);
+    
+    try {
+      const items = await ActionService.ListDirectory(path, pattern || '*', !!recursive);
+      
+      // Filter by include type
+      let filtered = items;
+      if (include === 'files') {
+        filtered = items.filter((item: any) => !item.isDir);
+      } else if (include === 'folders') {
+        filtered = items.filter((item: any) => item.isDir);
+      }
+      
+      onLog('success', `✓ Found ${filtered.length} items`);
+      return filtered;
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      onLog('error', `✗ Failed to list directory: ${errorMsg}`);
+      throw error;
+    }
+  },
+
+  action_csv_parse: async ({ data, onLog }) => {
+    const { csv, delimiter, headers } = data;
+    onLog('info', '📊 Parsing CSV...');
+    
+    try {
+      const rows = csv.split('\n').filter((line: string) => line.trim());
+      const delim = delimiter || ',';
+      
+      if (rows.length === 0) return [];
+      
+      if (!headers) {
+        const result = rows.map((row: string) => row.split(delim));
+        onLog('success', `✓ Parsed ${result.length} rows (no headers)`);
+        return result;
+      }
+      
+      const head = rows[0].split(delim).map((h: string) => h.trim());
+      const result = rows.slice(1).map((row: string) => {
+        const values = row.split(delim);
+        const obj: any = {};
+        head.forEach((h: string, i: number) => {
+          obj[h] = values[i]?.trim() || '';
+        });
+        return obj;
+      });
+      
+      onLog('success', `✓ Parsed ${result.length} rows with ${head.length} columns`);
+      return result;
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      onLog('error', `✗ Failed to parse CSV: ${errorMsg}`);
+      throw error;
+    }
+  },
+
+  action_csv_write: async ({ data, onLog }) => {
+    const { data: inputData, delimiter, headers } = data;
+    onLog('info', '📊 Writing CSV...');
+    
+    try {
+      let arr: any[];
+      try {
+        arr = typeof inputData === 'string' ? JSON.parse(inputData) : inputData;
+      } catch {
+        throw new Error('Input must be a valid JSON array');
+      }
+      
+      if (!Array.isArray(arr)) throw new Error('Data is not an array');
+      if (arr.length === 0) return '';
+      
+      const delim = delimiter || ',';
+      const keys = Object.keys(arr[0]);
+      let csv = '';
+      
+      if (headers) {
+        csv += keys.join(delim) + '\n';
+      }
+      
+      csv += arr.map((row: any) => {
+        return keys.map(key => {
+          const val = row[key];
+          if (val === null || val === undefined) return '';
+          const str = String(val);
+          if (str.includes(delim) || str.includes('\n') || str.includes('"')) {
+            return `"${str.replace(/"/g, '""')}"`;
+          }
+          return str;
+        }).join(delim);
+      }).join('\n');
+      
+      onLog('success', `✓ Generated CSV (${csv.length} chars)`);
+      return csv;
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      onLog('error', `✗ Failed to write CSV: ${errorMsg}`);
+      throw error;
+    }
+  },
+
+  action_file_info: async ({ data, onLog }) => {
+    const { path } = data;
+    onLog('info', `ℹ️ Getting info for: ${path}`);
+    
+    try {
+      const { FileInfo } = await import('../../wailsjs/go/main/ActionService');
+      const info = await FileInfo(path);
+      onLog('success', `✓ File info retrieved: ${info.size} bytes`);
+      return info;
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      onLog('error', `✗ Failed to get file info: ${errorMsg}`);
+      throw error;
+    }
+  },
+
+  action_zip_compress: async ({ data, onLog }) => {
+    const { sources, zipPath } = data;
+    onLog('info', `🗜️ Compressing to: ${zipPath}`);
+    
+    try {
+      let sourceList: string[];
+      if (typeof sources === 'string') {
+        try {
+          sourceList = JSON.parse(sources);
+          if (!Array.isArray(sourceList)) sourceList = sources.split('\n').map(s => s.trim()).filter(Boolean);
+        } catch {
+          sourceList = sources.split('\n').map(s => s.trim()).filter(Boolean);
+        }
+      } else if (Array.isArray(sources)) {
+        sourceList = sources;
+      } else {
+        throw new Error('Sources must be an array or line-separated string');
+      }
+
+      if (sourceList.length === 0) throw new Error('No source paths provided');
+
+      const { Compress } = await import('../../wailsjs/go/main/ActionService');
+      await Compress(sourceList, zipPath);
+      onLog('success', `✓ Created ZIP archive: ${zipPath}`);
+      return { success: true, path: zipPath };
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      onLog('error', `✗ Failed to compress: ${errorMsg}`);
+      throw error;
+    }
+  },
+
+  action_zip_extract: async ({ data, onLog }) => {
+    const { zipPath, destination } = data;
+    onLog('info', `📂 Extracting ${zipPath} to ${destination}`);
+    
+    try {
+      const { Extract } = await import('../../wailsjs/go/main/ActionService');
+      await Extract(zipPath, destination);
+      onLog('success', `✓ Extracted archive to: ${destination}`);
+      return { success: true, destination };
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      onLog('error', `✗ Failed to extract: ${errorMsg}`);
+      throw error;
+    }
+  },
 };

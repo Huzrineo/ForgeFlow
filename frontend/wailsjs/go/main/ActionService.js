@@ -6,6 +6,10 @@ export function AppendFile(arg1, arg2) {
   return window['go']['main']['ActionService']['AppendFile'](arg1, arg2);
 }
 
+export function Compress(arg1, arg2) {
+  return window['go']['main']['ActionService']['Compress'](arg1, arg2);
+}
+
 export function CopyFile(arg1, arg2) {
   return window['go']['main']['ActionService']['CopyFile'](arg1, arg2);
 }
@@ -14,8 +18,16 @@ export function DeleteFile(arg1) {
   return window['go']['main']['ActionService']['DeleteFile'](arg1);
 }
 
+export function Extract(arg1, arg2) {
+  return window['go']['main']['ActionService']['Extract'](arg1, arg2);
+}
+
 export function FileExists(arg1) {
   return window['go']['main']['ActionService']['FileExists'](arg1);
+}
+
+export function FileInfo(arg1) {
+  return window['go']['main']['ActionService']['FileInfo'](arg1);
 }
 
 export function GenerateUUID() {
@@ -30,8 +42,20 @@ export function GetCurrentTime(arg1) {
   return window['go']['main']['ActionService']['GetCurrentTime'](arg1);
 }
 
+export function GetSecret(arg1) {
+  return window['go']['main']['ActionService']['GetSecret'](arg1);
+}
+
+export function GetSetting(arg1) {
+  return window['go']['main']['ActionService']['GetSetting'](arg1);
+}
+
 export function HTTPRequest(arg1, arg2, arg3, arg4) {
   return window['go']['main']['ActionService']['HTTPRequest'](arg1, arg2, arg3, arg4);
+}
+
+export function ListDirectory(arg1, arg2, arg3) {
+  return window['go']['main']['ActionService']['ListDirectory'](arg1, arg2, arg3);
 }
 
 export function MoveFile(arg1, arg2) {
@@ -48,6 +72,14 @@ export function ReadFile(arg1) {
 
 export function RunCommand(arg1, arg2, arg3) {
   return window['go']['main']['ActionService']['RunCommand'](arg1, arg2, arg3);
+}
+
+export function SaveSecret(arg1, arg2) {
+  return window['go']['main']['ActionService']['SaveSecret'](arg1, arg2);
+}
+
+export function SaveSetting(arg1, arg2) {
+  return window['go']['main']['ActionService']['SaveSetting'](arg1, arg2);
 }
 
 export function SetClipboard(arg1) {

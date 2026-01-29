@@ -280,4 +280,67 @@ export const appHandlers: Record<string, (ctx: HandlerContext) => Promise<any>> 
     const result = typeof response.json === 'object' ? response.json : JSON.parse(response.body);
     return { id: result.id, url: result.url, title: data.title };
   },
+
+  // === FORGEFLOW INTERNAL ===
+  app_settings_get: async ({ data, onLog }) => {
+    const { key } = data;
+    onLog('info', `⚙️  Get setting: ${key}`);
+    
+    try {
+      const ActionService = await import('../../wailsjs/go/main/ActionService');
+      const value = await ActionService.GetSetting(key);
+      onLog('success', `✓ Setting '${key}': ${value}`);
+      return value;
+    } catch (error) {
+      onLog('warn', `⚠️  Setting '${key}' not found or error: ${error}`);
+      return null;
+    }
+  },
+
+  app_settings_set: async ({ data, onLog }) => {
+    const { key, value } = data;
+    onLog('info', `⚙️  Set setting: ${key}`);
+    
+    try {
+      const ActionService = await import('../../wailsjs/go/main/ActionService');
+      await ActionService.SaveSetting(key, String(value));
+      onLog('success', `✓ Setting '${key}' updated`);
+      return { success: true, key };
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      onLog('error', `✗ Failed to set setting: ${errorMsg}`);
+      throw error;
+    }
+  },
+
+  app_secret_get: async ({ data, onLog }) => {
+    const { key } = data;
+    onLog('info', `🔒 Get secret: ${key}`);
+    
+    try {
+      const ActionService = await import('../../wailsjs/go/main/ActionService');
+      const value = await ActionService.GetSecret(key);
+      onLog('success', `✓ Secret '${key}' retrieved`);
+      return value;
+    } catch (error) {
+      onLog('warn', `⚠️  Secret '${key}' not found or error: ${error}`);
+      return null;
+    }
+  },
+
+  app_secret_set: async ({ data, onLog }) => {
+    const { key, value } = data;
+    onLog('info', `🔒 Set secret: ${key}`);
+    
+    try {
+      const ActionService = await import('../../wailsjs/go/main/ActionService');
+      await ActionService.SaveSecret(key, String(value));
+      onLog('success', `✓ Secret '${key}' stored in vault`);
+      return { success: true, key };
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      onLog('error', `✗ Failed to store secret: ${errorMsg}`);
+      throw error;
+    }
+  },
 };

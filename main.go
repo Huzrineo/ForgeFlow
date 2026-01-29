@@ -23,7 +23,7 @@ func main() {
 	storage := NewStorage()
 	engine := NewEngine(storage)
 	triggerManager := NewTriggerManager(engine, storage)
-	actionService := NewActionService(app)
+	actionService := NewActionService(app, storage)
 	excelService := NewExcelService()
 
 	// 2. Launch Wails window immediately

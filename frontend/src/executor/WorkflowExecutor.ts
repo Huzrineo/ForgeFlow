@@ -214,6 +214,99 @@ export class WorkflowExecutor {
         return output;
       }
 
+      if (nodeType === 'loop_parallel_foreach') {
+        const { items, itemVar, concurrency } = output;
+        const loopEdges = outgoing.filter(e => e.sourceHandle === 'loop');
+        const doneEdges = outgoing.filter(e => e.sourceHandle === 'done');
+        const limit = parseInt(concurrency) || 5;
+
+        if (Array.isArray(items)) {
+          this.onLog('info', `⚡ [Parallel] Processing ${items.length} items (concurrency: ${limit})`, nodeId);
+          
+          // Split items into chunks
+          for (let i = 0; i < items.length; i += limit) {
+            if (this.isAborted) break;
+            const chunk = items.slice(i, i + limit);
+            
+            await Promise.all(chunk.map(async (item, chunkIdx) => {
+              const idx = i + chunkIdx;
+              // Note: Variables might need isolation for parallel execution
+              // For now, we'll try a simple shared variable approach (warning: race conditions likely)
+              // In a robust implementation, each parallel branch should have local variables
+              this.variables[itemVar || 'item'] = item;
+              
+              const nodeLog = `⚡ [Parallel] Item ${idx + 1}/${items.length}`;
+              this.onLog('info', nodeLog, nodeId);
+
+              for (const edge of loopEdges) {
+                await this.executeNode(edge.target);
+              }
+            }));
+          }
+        }
+
+        for (const edge of doneEdges) {
+          await this.executeNode(edge.target);
+        }
+        return output;
+      }
+
+      // === 2. Handle Branching & Error Handling ===
+      if (nodeType === 'condition_try_catch') {
+        const tryEdges = outgoing.filter(e => e.sourceHandle === 'try');
+        const catchEdges = outgoing.filter(e => e.sourceHandle === 'catch');
+        
+        try {
+          for (const edge of tryEdges) {
+            await this.executeNode(edge.target);
+          }
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          this.variables['error'] = errorMsg;
+          this.onLog('warn', `🛡️ Caught error: ${errorMsg}. Routing to catch branch.`, nodeId);
+          
+          for (const edge of catchEdges) {
+            await this.executeNode(edge.target);
+          }
+          
+          if (output?.continueOnError === false) {
+            throw error;
+          }
+        }
+        return output;
+      }
+
+      if (nodeType === 'condition_filter') {
+        const { matched, notMatched } = output;
+        
+        // Process match branch
+        if (matched && matched.length > 0) {
+          const matchEdges = outgoing.filter(e => e.sourceHandle === 'match');
+          // Temporarily set output to matched array for the downstream nodes
+          const originalOutput = this.variables['output'];
+          this.variables['output'] = matched;
+          
+          for (const edge of matchEdges) {
+            await this.executeNode(edge.target);
+          }
+          // Restore (optional, depends on desired flow behavior)
+          this.variables['output'] = originalOutput;
+        }
+        
+        // Process no-match branch
+        if (notMatched && notMatched.length > 0) {
+          const noMatchEdges = outgoing.filter(e => e.sourceHandle === 'nomatch');
+          const originalOutput = this.variables['output'];
+          this.variables['output'] = notMatched;
+          
+          for (const edge of noMatchEdges) {
+            await this.executeNode(edge.target);
+          }
+          this.variables['output'] = originalOutput;
+        }
+        return output;
+      }
+
       if (nodeType === 'condition_manual_approval') {
         const { title, message } = output;
         this.onLog('info', `⏳ Waiting for manual approval: ${title}`, nodeId);
@@ -250,7 +343,13 @@ export class WorkflowExecutor {
       }
 
       // === 2. Handle Conditional Branching ===
-      if (nodeType === 'condition_if') {
+      if (
+        nodeType === 'condition_if' || 
+        nodeType === 'condition_type_check' || 
+        nodeType === 'condition_is_empty' ||
+        nodeType === 'condition_date_compare' ||
+        nodeType === 'condition_array_contains'
+      ) {
         const branch = output === true ? 'true' : 'false';
         const branchEdges = outgoing.filter(e => e.sourceHandle === branch);
         

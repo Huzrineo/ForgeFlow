@@ -18,6 +18,10 @@ export function GetFlow(arg1) {
   return window['go']['main']['Storage']['GetFlow'](arg1);
 }
 
+export function GetSecret(arg1) {
+  return window['go']['main']['Storage']['GetSecret'](arg1);
+}
+
 export function ImportFlow(arg1) {
   return window['go']['main']['Storage']['ImportFlow'](arg1);
 }
@@ -48,6 +52,10 @@ export function SaveExecution(arg1) {
 
 export function SaveFlow(arg1) {
   return window['go']['main']['Storage']['SaveFlow'](arg1);
+}
+
+export function SaveSecret(arg1, arg2) {
+  return window['go']['main']['Storage']['SaveSecret'](arg1, arg2);
 }
 
 export function SaveSettings(arg1) {

@@ -3,11 +3,17 @@
 
 export function AppendFile(arg1:string,arg2:string):Promise<void>;
 
+export function Compress(arg1:Array<string>,arg2:string):Promise<void>;
+
 export function CopyFile(arg1:string,arg2:string):Promise<void>;
 
 export function DeleteFile(arg1:string):Promise<void>;
 
+export function Extract(arg1:string,arg2:string):Promise<void>;
+
 export function FileExists(arg1:string):Promise<boolean>;
+
+export function FileInfo(arg1:string):Promise<Record<string, any>>;
 
 export function GenerateUUID():Promise<string>;
 
@@ -15,7 +21,13 @@ export function GetClipboard():Promise<string>;
 
 export function GetCurrentTime(arg1:string):Promise<string>;
 
+export function GetSecret(arg1:string):Promise<string>;
+
+export function GetSetting(arg1:string):Promise<string>;
+
 export function HTTPRequest(arg1:string,arg2:string,arg3:Record<string, string>,arg4:string):Promise<Record<string, any>>;
+
+export function ListDirectory(arg1:string,arg2:string,arg3:boolean):Promise<Array<Record<string, any>>>;
 
 export function MoveFile(arg1:string,arg2:string):Promise<void>;
 
@@ -24,6 +36,10 @@ export function OpenURL(arg1:string):Promise<void>;
 export function ReadFile(arg1:string):Promise<string>;
 
 export function RunCommand(arg1:string,arg2:Array<string>,arg3:string):Promise<Record<string, any>>;
+
+export function SaveSecret(arg1:string,arg2:string):Promise<void>;
+
+export function SaveSetting(arg1:string,arg2:string):Promise<void>;
 
 export function SetClipboard(arg1:string):Promise<void>;
 

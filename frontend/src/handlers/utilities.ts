@@ -258,4 +258,197 @@ export const utilityHandlers: Record<string, (ctx: HandlerContext) => Promise<an
     onLog('success', `✓ Generated: ${result}`);
     return result;
   },
+
+  util_encode: async ({ data, variables, onLog }) => {
+    const mode = data.mode || 'base64_encode';
+    const text = String(data.text || variables['output'] || '');
+    
+    onLog('info', `🔐 Encode: ${mode}`);
+    
+    let result: string;
+    
+    switch (mode) {
+      case 'base64_encode':
+        result = btoa(unescape(encodeURIComponent(text)));
+        break;
+      case 'base64_decode':
+        try {
+          result = decodeURIComponent(escape(atob(text)));
+        } catch {
+          result = atob(text);
+        }
+        break;
+      case 'url_encode':
+        result = encodeURIComponent(text);
+        break;
+      case 'url_decode':
+        result = decodeURIComponent(text);
+        break;
+      case 'hex_encode':
+        result = Array.from(text).map(c => c.charCodeAt(0).toString(16).padStart(2, '0')).join('');
+        break;
+      case 'hex_decode':
+        result = text.match(/.{1,2}/g)?.map(byte => String.fromCharCode(parseInt(byte, 16))).join('') || '';
+        break;
+      case 'html_encode':
+        result = text
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+        break;
+      case 'html_decode':
+        result = text
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"')
+          .replace(/&#039;/g, "'");
+        break;
+      default:
+        result = text;
+    }
+    
+    onLog('success', `✓ Result: ${result.substring(0, 50)}${result.length > 50 ? '...' : ''}`);
+    return result;
+  },
+
+  util_object: async ({ data, variables, onLog }) => {
+    const mode = data.mode || 'keys';
+    let obj: any;
+    
+    const objInput = data.object || variables['output'];
+    try {
+      obj = typeof objInput === 'string' ? JSON.parse(objInput) : objInput;
+    } catch {
+      obj = {};
+    }
+    
+    if (typeof obj !== 'object' || obj === null) {
+      onLog('warn', '⚠️ Input is not an object');
+      obj = {};
+    }
+    
+    onLog('info', `📦 Object: ${mode}`);
+    
+    const fieldsArray = (data.fields || '')
+      .split(',')
+      .map((f: string) => f.trim())
+      .filter((f: string) => f);
+    
+    let result: any;
+    
+    switch (mode) {
+      case 'keys':
+        result = Object.keys(obj);
+        break;
+      case 'values':
+        result = Object.values(obj);
+        break;
+      case 'entries':
+        result = Object.entries(obj);
+        break;
+      case 'pick':
+        result = {};
+        for (const field of fieldsArray) {
+          if (field in obj) {
+            result[field] = obj[field];
+          }
+        }
+        break;
+      case 'omit':
+        result = { ...obj };
+        for (const field of fieldsArray) {
+          delete result[field];
+        }
+        break;
+      case 'delete':
+        result = { ...obj };
+        for (const field of fieldsArray) {
+          delete result[field];
+        }
+        break;
+      case 'has':
+        result = fieldsArray.length > 0 ? fieldsArray[0] in obj : false;
+        break;
+      case 'size':
+        result = Object.keys(obj).length;
+        break;
+      default:
+        result = obj;
+    }
+    
+    onLog('success', `✓ Result: ${typeof result === 'object' ? JSON.stringify(result).substring(0, 50) : result}`);
+    return result;
+  },
+
+  util_comment: async ({ data, variables, onLog }) => {
+    const comment = data.comment || '(no comment)';
+    onLog('info', `💬 Comment: ${comment.substring(0, 100)}${comment.length > 100 ? '...' : ''}`);
+    // Pass through the previous output unchanged
+    return variables['output'];
+  },
+
+  util_json: async ({ data, variables, onLog }) => {
+    const mode = data.mode || 'parse';
+    const input = data.input || variables['output'];
+    const pretty = data.pretty !== false;
+    
+    onLog('info', `📄 JSON: ${mode}`);
+    
+    let result: any;
+    
+    try {
+      if (mode === 'parse') {
+        result = typeof input === 'string' ? JSON.parse(input) : input;
+        onLog('success', `✓ Parsed JSON (${typeof result})`);
+      } else {
+        const obj = typeof input === 'string' ? JSON.parse(input) : input;
+        result = pretty ? JSON.stringify(obj, null, 2) : JSON.stringify(obj);
+        onLog('success', `✓ Stringified (${result.length} chars)`);
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      onLog('error', `✗ JSON error: ${errorMsg}`);
+      throw error;
+    }
+    
+    return result;
+  },
+
+  util_counter: async ({ data, variables, onLog }) => {
+    const name = data.name || 'counter';
+    const operation = data.operation || 'increment';
+    const amount = parseInt(data.amount) || 1;
+    
+    // Get current counter value from variables
+    let current = typeof variables[name] === 'number' ? variables[name] : 0;
+    
+    onLog('info', `🔢 Counter "${name}": ${operation}`);
+    
+    switch (operation) {
+      case 'increment':
+        current += amount;
+        break;
+      case 'decrement':
+        current -= amount;
+        break;
+      case 'reset':
+        current = 0;
+        break;
+      case 'get':
+        // Just return current value
+        break;
+      case 'set':
+        current = amount;
+        break;
+    }
+    
+    // Store back in variables
+    variables[name] = current;
+    
+    onLog('success', `✓ Counter value: ${current}`);
+    return current;
+  },
 };

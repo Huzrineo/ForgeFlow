@@ -249,4 +249,186 @@ export const utilityNodes: NodeDefinition[] = [
       },
     ],
   },
+  {
+    type: 'util_encode',
+    category: 'utility',
+    name: 'Encode/Decode',
+    icon: '🔐',
+    color: '#64748b',
+    description: 'Base64, URL encode, hashing (MD5, SHA)',
+    inputs: [{ id: 'in', type: 'input' }],
+    outputs: [{ id: 'out', type: 'output', label: 'Result' }],
+    defaultData: { mode: 'base64_encode', text: '' },
+    fields: [
+      { 
+        key: 'mode', 
+        label: 'Operation', 
+        type: 'select', 
+        options: [
+          { value: 'base64_encode', label: 'Base64 Encode' },
+          { value: 'base64_decode', label: 'Base64 Decode' },
+          { value: 'url_encode', label: 'URL Encode' },
+          { value: 'url_decode', label: 'URL Decode' },
+          { value: 'hex_encode', label: 'Hex Encode' },
+          { value: 'hex_decode', label: 'Hex Decode' },
+          { value: 'html_encode', label: 'HTML Encode' },
+          { value: 'html_decode', label: 'HTML Decode' },
+        ]
+      },
+      { 
+        key: 'text', 
+        label: 'Text', 
+        type: 'textarea', 
+        placeholder: '{{output}}', 
+        required: true 
+      },
+    ],
+  },
+  {
+    type: 'util_object',
+    category: 'utility',
+    name: 'Object',
+    icon: '{}',
+    color: '#64748b',
+    description: 'Object operations (keys, values, entries, pick, omit)',
+    inputs: [{ id: 'in', type: 'input' }],
+    outputs: [{ id: 'out', type: 'output', label: 'Result' }],
+    defaultData: { mode: 'keys', object: '', fields: '' },
+    fields: [
+      { 
+        key: 'mode', 
+        label: 'Operation', 
+        type: 'select', 
+        options: [
+          { value: 'keys', label: 'Get Keys (array)' },
+          { value: 'values', label: 'Get Values (array)' },
+          { value: 'entries', label: 'Get Entries ([key, value] pairs)' },
+          { value: 'pick', label: 'Pick Fields (keep only specified)' },
+          { value: 'omit', label: 'Omit Fields (remove specified)' },
+          { value: 'delete', label: 'Delete Field' },
+          { value: 'has', label: 'Has Key (boolean)' },
+          { value: 'size', label: 'Size (number of keys)' },
+        ]
+      },
+      { 
+        key: 'object', 
+        label: 'Object', 
+        type: 'textarea', 
+        placeholder: '{{output}}', 
+        required: true 
+      },
+      { 
+        key: 'fields', 
+        label: 'Fields (comma-separated)', 
+        type: 'text', 
+        placeholder: 'field1, field2, nested.field' 
+      },
+    ],
+  },
+  {
+    type: 'util_comment',
+    category: 'utility',
+    name: 'Comment',
+    icon: '💬',
+    color: '#64748b',
+    description: 'Add notes to your workflow (no execution)',
+    inputs: [{ id: 'in', type: 'input' }],
+    outputs: [{ id: 'out', type: 'output', label: 'Pass' }],
+    defaultData: { comment: '', color: '#64748b' },
+    fields: [
+      { 
+        key: 'comment', 
+        label: 'Comment', 
+        type: 'textarea', 
+        placeholder: 'Add notes about this workflow section...' 
+      },
+      { 
+        key: 'color', 
+        label: 'Color', 
+        type: 'select', 
+        options: [
+          { value: '#64748b', label: 'Gray' },
+          { value: '#3b82f6', label: 'Blue' },
+          { value: '#22c55e', label: 'Green' },
+          { value: '#f59e0b', label: 'Orange' },
+          { value: '#ef4444', label: 'Red' },
+          { value: '#a855f7', label: 'Purple' },
+        ]
+      },
+    ],
+  },
+  {
+    type: 'util_json',
+    category: 'utility',
+    name: 'JSON',
+    icon: '{ }',
+    color: '#64748b',
+    description: 'Parse or stringify JSON',
+    inputs: [{ id: 'in', type: 'input' }],
+    outputs: [{ id: 'out', type: 'output', label: 'Result' }],
+    defaultData: { mode: 'parse', input: '', pretty: true },
+    fields: [
+      { 
+        key: 'mode', 
+        label: 'Mode', 
+        type: 'select', 
+        options: [
+          { value: 'parse', label: 'Parse (string → object)' },
+          { value: 'stringify', label: 'Stringify (object → string)' },
+        ]
+      },
+      { 
+        key: 'input', 
+        label: 'Input', 
+        type: 'textarea', 
+        placeholder: '{{output}}', 
+        required: true 
+      },
+      { 
+        key: 'pretty', 
+        label: 'Pretty Print', 
+        type: 'boolean', 
+        defaultValue: true 
+      },
+    ],
+  },
+  {
+    type: 'util_counter',
+    category: 'utility',
+    name: 'Counter',
+    icon: '🔢',
+    color: '#64748b',
+    description: 'Increment/decrement a counter variable',
+    inputs: [{ id: 'in', type: 'input' }],
+    outputs: [{ id: 'out', type: 'output', label: 'Value' }],
+    defaultData: { name: 'counter', operation: 'increment', amount: 1 },
+    fields: [
+      { 
+        key: 'name', 
+        label: 'Counter Name', 
+        type: 'text', 
+        placeholder: 'counter', 
+        required: true 
+      },
+      { 
+        key: 'operation', 
+        label: 'Operation', 
+        type: 'select', 
+        options: [
+          { value: 'increment', label: 'Increment (+)' },
+          { value: 'decrement', label: 'Decrement (-)' },
+          { value: 'reset', label: 'Reset to 0' },
+          { value: 'get', label: 'Get Value' },
+          { value: 'set', label: 'Set Value' },
+        ]
+      },
+      { 
+        key: 'amount', 
+        label: 'Amount', 
+        type: 'number', 
+        placeholder: '1', 
+        defaultValue: 1 
+      },
+    ],
+  },
 ];
