@@ -17,6 +17,10 @@ const shortcutGroups: ShortcutGroup[] = [
   {
     category: 'Edit',
     shortcuts: [
+      { action: 'Undo', keys: ['Ctrl', 'Z'] },
+      { action: 'Redo', keys: ['Ctrl', 'Y'] },
+      { action: 'Copy node', keys: ['Ctrl', 'C'] },
+      { action: 'Paste node', keys: ['Ctrl', 'V'] },
       { action: 'Duplicate node', keys: ['Ctrl', 'D'] },
       { action: 'Delete node', keys: ['Delete'] },
       { action: 'Deselect node', keys: ['Esc'] },

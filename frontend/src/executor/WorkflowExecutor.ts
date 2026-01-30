@@ -4,6 +4,8 @@ import { getHandler } from '@/handlers';
 import type { LogCallback, HandlerContext } from '@/handlers/types';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useDialogStore } from '@/stores/dialogStore';
+import { useCustomNodeStore } from '@/stores/customNodeStore';
+import { executeCustomNode } from '@/handlers/custom';
 
 export interface NodeResult {
   nodeId: string;
@@ -404,13 +406,7 @@ export class WorkflowExecutor {
 
     // Get handler
     const nodeType = node.data.nodeType as string;
-    const handler = getHandler(nodeType);
     
-    if (!handler) {
-      this.onLog('warn', `⚠️  Unknown node type: ${nodeType}`, node.id);
-      return null;
-    }
-
     // Build context
     const ctx: HandlerContext = {
       data,
@@ -431,6 +427,22 @@ export class WorkflowExecutor {
         }
       }
     };
+
+    // Check for custom node first
+    const customNodes = useCustomNodeStore.getState().customNodes;
+    const customNode = customNodes.find(n => n.type === nodeType);
+    
+    if (customNode) {
+      return executeCustomNode(customNode, ctx);
+    }
+
+    // Get built-in handler
+    const handler = getHandler(nodeType);
+    
+    if (!handler) {
+      this.onLog('warn', `⚠️  Unknown node type: ${nodeType}`, node.id);
+      return null;
+    }
 
     // Execute handler
     return handler(ctx);

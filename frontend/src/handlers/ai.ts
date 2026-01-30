@@ -21,14 +21,16 @@ export const aiHandlers: Record<string, (ctx: HandlerContext) => Promise<any>> =
     
     onLog('info', `🤖 AI Request (${provider})`);
     
-    // Get provider config
+    // Get provider config (Ollama doesn't need config)
     const config = settings.aiServices[provider as keyof typeof settings.aiServices];
-    if (!config || (!config.enabled && provider !== 'custom')) {
-      throw new Error(`AI Provider "${provider}" is not enabled. Please configure it in Settings > AI Endpoints.`);
-    }
+    if (provider !== 'ollama') {
+      if (!config || (!config.enabled && provider !== 'custom')) {
+        throw new Error(`AI Provider "${provider}" is not enabled. Please configure it in Settings > AI Endpoints.`);
+      }
 
-    if (!config.apiKey && provider !== 'custom') {
-      throw new Error(`API Key for "${provider}" is missing. Please set it in Settings > AI Endpoints.`);
+      if (!config.apiKey && provider !== 'custom') {
+        throw new Error(`API Key for "${provider}" is missing. Please set it in Settings > AI Endpoints.`);
+      }
     }
 
     try {
@@ -71,6 +73,10 @@ export const aiHandlers: Record<string, (ctx: HandlerContext) => Promise<any>> =
       let defaultModel = '';
       
       switch (provider) {
+        case 'ollama':
+          url = 'http://localhost:11434/api/chat';
+          defaultModel = 'llama3.2';
+          break;
         case 'openai':
           url = 'https://api.openai.com/v1/chat/completions';
           defaultModel = 'gpt-4o-mini';
@@ -100,7 +106,7 @@ export const aiHandlers: Record<string, (ctx: HandlerContext) => Promise<any>> =
         'Content-Type': 'application/json',
       };
       
-      if (config.apiKey) {
+      if (config?.apiKey) {
         headers['Authorization'] = `Bearer ${config.apiKey}`;
       }
       
@@ -109,21 +115,44 @@ export const aiHandlers: Record<string, (ctx: HandlerContext) => Promise<any>> =
         headers['X-Title'] = 'ForgeFlow';
       }
 
-      const response = await api.http.post(url, {
-        model: model || defaultModel,
-        messages,
-        temperature: temperature ?? 0.7,
-      }, headers);
+      let content: string;
+      
+      if (provider === 'ollama') {
+        // Ollama has a different API format
+        const response = await api.http.post(url, {
+          model: model || defaultModel,
+          messages,
+          stream: false,
+          options: { temperature: temperature ?? 0.7 },
+        }, headers);
 
-      if (response.error) throw new Error(response.error);
-      
-      const result = typeof response.json === 'object' ? response.json : JSON.parse(response.body);
-      
-      if (result.error) {
-        throw new Error(result.error.message || JSON.stringify(result.error));
+        if (response.error) throw new Error(response.error);
+        
+        const result = typeof response.json === 'object' ? response.json : JSON.parse(response.body);
+        
+        if (result.error) {
+          throw new Error(result.error);
+        }
+
+        content = result.message?.content || '';
+      } else {
+        // OpenAI-compatible API
+        const response = await api.http.post(url, {
+          model: model || defaultModel,
+          messages,
+          temperature: temperature ?? 0.7,
+        }, headers);
+
+        if (response.error) throw new Error(response.error);
+        
+        const result = typeof response.json === 'object' ? response.json : JSON.parse(response.body);
+        
+        if (result.error) {
+          throw new Error(result.error.message || JSON.stringify(result.error));
+        }
+
+        content = result.choices[0].message.content;
       }
-
-      const content = result.choices[0].message.content;
       
       // Save to memory if enabled
       if (enableMemory && memoryKey) {
@@ -139,8 +168,7 @@ export const aiHandlers: Record<string, (ctx: HandlerContext) => Promise<any>> =
         });
       }
       
-      const tokens = result.usage?.total_tokens || 0;
-      onLog('success', `✓ AI Response received (${tokens} tokens)`);
+      onLog('success', `✓ AI Response received`);
       
       return content;
     } catch (error) {

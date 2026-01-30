@@ -1,28 +1,40 @@
-import { useState, useMemo } from 'react';
-import { X, Search, LayoutTemplate, ChevronRight } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { X, Search, LayoutTemplate, ChevronRight, Globe, Loader2, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFlowStore } from '@/stores/flowStore';
 import { useWorkflowStore } from '@/stores/workflowStore';
-import { workflowTemplates, getTemplatesByCategory } from '@/data/templates';
+import { workflowTemplates } from '@/data/templates';
 import type { WorkflowTemplate } from '@/types/template';
 import type { FlowNode, FlowEdge, NodeData } from '@/types/flow';
 import { nodeDefinitions } from '@/nodes';
 import { toast } from '@/stores/dialogStore';
 
+type TabType = 'local' | 'community';
+
 export default function TemplatesModal() {
-  const { templateModalOpen, setTemplateModalOpen, setWorkflowPanelOpen } = useWorkflowStore();
+  const { 
+    templateModalOpen, setTemplateModalOpen, setWorkflowPanelOpen,
+    communityTemplates, communityLoading, communityError, fetchCommunityTemplates
+  } = useWorkflowStore();
   const { setNodes, setEdges, saveFlow, pushHistory } = useFlowStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<WorkflowTemplate | null>(null);
+  const [activeTab, setActiveTab] = useState<TabType>('local');
 
-  const categories = useMemo(() => getTemplatesByCategory(), []);
-  const categoryNames = Object.keys(categories);
+  // Fetch community templates when switching to community tab
+  useEffect(() => {
+    if (activeTab === 'community' && communityTemplates.length === 0 && !communityLoading) {
+      fetchCommunityTemplates();
+    }
+  }, [activeTab, communityTemplates.length, communityLoading, fetchCommunityTemplates]);
 
   const filteredTemplates = useMemo(() => {
+    const sourceTemplates = activeTab === 'local' ? workflowTemplates : communityTemplates;
+    
     let templates = selectedCategory 
-      ? categories[selectedCategory] || []
-      : workflowTemplates;
+      ? sourceTemplates.filter(t => t.category === selectedCategory)
+      : sourceTemplates;
     
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -34,7 +46,17 @@ export default function TemplatesModal() {
     }
     
     return templates;
-  }, [selectedCategory, searchQuery, categories]);
+  }, [selectedCategory, searchQuery, activeTab, communityTemplates]);
+
+  const currentCategories = useMemo(() => {
+    const sourceTemplates = activeTab === 'local' ? workflowTemplates : communityTemplates;
+    const cats: Record<string, WorkflowTemplate[]> = {};
+    sourceTemplates.forEach(t => {
+      if (!cats[t.category]) cats[t.category] = [];
+      cats[t.category].push(t);
+    });
+    return cats;
+  }, [activeTab, communityTemplates]);
 
   if (!templateModalOpen) return null;
 
@@ -119,11 +141,35 @@ export default function TemplatesModal() {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
       <div className="w-full max-w-4xl h-[600px] bg-card border border-border rounded-2xl shadow-2xl flex overflow-hidden animate-in zoom-in-95 duration-200">
         {/* Sidebar - Categories */}
-        <div className="w-48 bg-muted/30 border-r border-border flex flex-col">
+        <div className="w-52 bg-muted/30 border-r border-border flex flex-col">
           <div className="p-4 border-b border-border">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 mb-3">
               <LayoutTemplate className="w-5 h-5 text-primary" />
               <h2 className="font-semibold">Templates</h2>
+            </div>
+            
+            {/* Tabs */}
+            <div className="flex gap-1 p-1 bg-muted rounded-lg">
+              <button
+                onClick={() => { setActiveTab('local'); setSelectedCategory(null); }}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-xs font-medium transition-colors',
+                  activeTab === 'local' ? 'bg-background shadow-sm' : 'hover:bg-background/50'
+                )}
+              >
+                <LayoutTemplate className="w-3.5 h-3.5" />
+                Built-in
+              </button>
+              <button
+                onClick={() => { setActiveTab('community'); setSelectedCategory(null); }}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-xs font-medium transition-colors',
+                  activeTab === 'community' ? 'bg-background shadow-sm' : 'hover:bg-background/50'
+                )}
+              >
+                <Globe className="w-3.5 h-3.5" />
+                Community
+              </button>
             </div>
           </div>
 
@@ -140,7 +186,7 @@ export default function TemplatesModal() {
             
             <div className="my-2 h-px bg-border" />
             
-            {categoryNames.map((category) => (
+            {Object.keys(currentCategories).map((category) => (
               <button
                 key={category}
                 onClick={() => setSelectedCategory(category)}
@@ -150,9 +196,24 @@ export default function TemplatesModal() {
                 )}
               >
                 <span>{category}</span>
-                <span className="text-xs text-muted-foreground">{categories[category].length}</span>
+                <span className="text-xs text-muted-foreground">{currentCategories[category].length}</span>
               </button>
             ))}
+
+            {activeTab === 'community' && (
+              <button
+                onClick={() => fetchCommunityTemplates()}
+                disabled={communityLoading}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 mt-2 rounded-lg text-xs text-muted-foreground hover:bg-muted transition-colors"
+              >
+                {communityLoading ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-3.5 h-3.5" />
+                )}
+                Refresh
+              </button>
+            )}
           </div>
         </div>
 
@@ -182,10 +243,29 @@ export default function TemplatesModal() {
 
           {/* Templates Grid */}
           <div className="flex-1 overflow-y-auto p-4">
-            {filteredTemplates.length === 0 ? (
+            {activeTab === 'community' && communityLoading ? (
+              <div className="flex flex-col items-center justify-center h-full text-center">
+                <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
+                <p className="text-muted-foreground">Loading community templates...</p>
+              </div>
+            ) : activeTab === 'community' && communityError ? (
+              <div className="flex flex-col items-center justify-center h-full text-center">
+                <Globe className="w-16 h-16 text-muted-foreground/30 mb-4" />
+                <p className="text-muted-foreground mb-2">Failed to load community templates</p>
+                <p className="text-xs text-muted-foreground mb-4">{communityError}</p>
+                <button
+                  onClick={() => fetchCommunityTemplates()}
+                  className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90"
+                >
+                  Try Again
+                </button>
+              </div>
+            ) : filteredTemplates.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center">
                 <LayoutTemplate className="w-16 h-16 text-muted-foreground/30 mb-4" />
-                <p className="text-muted-foreground">No templates found</p>
+                <p className="text-muted-foreground">
+                  {activeTab === 'community' ? 'No community templates available yet' : 'No templates found'}
+                </p>
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-3">

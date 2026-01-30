@@ -2,10 +2,11 @@ import { useState, useMemo } from "react";
 import {
   FileText, Clock, Webhook, Play, Monitor, FileIcon, Globe, Terminal, Bell,
   Download, Brain, Sparkles, Tag, Search as SearchIcon, PenTool, Wand2,
-  MessageSquare, GitBranch, ChevronRight
+  MessageSquare, GitBranch, ChevronRight, Plus, Settings2, Trash2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFlowStore } from "@/stores/flowStore";
+import { useCustomNodeStore, type CustomNodeDefinition } from "@/stores/customNodeStore";
 import type { NodeData, NodeCategory } from "@/types/flow";
 import { nodeDefinitions, getNodesByCategory } from "@/nodes";
 
@@ -92,8 +93,71 @@ function DraggableNode({ node, searchQuery }: { node: typeof nodeDefinitions[0],
   );
 }
 
+function CustomNodeItem({ node }: { node: CustomNodeDefinition }) {
+  const { addNodeAtCenter } = useFlowStore();
+  const { setEditingNode, deleteCustomNode } = useCustomNodeStore();
+
+  const onDragStart = (e: React.DragEvent) => {
+    const data: NodeData = {
+      label: node.name,
+      category: node.category,
+      icon: node.icon,
+      description: node.description,
+      status: "idle",
+      nodeType: node.type,
+      config: node.defaultData,
+    };
+    e.dataTransfer.setData("application/forgeflow-node", JSON.stringify(data));
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const onClick = () => addNodeAtCenter({
+    label: node.name,
+    category: node.category,
+    icon: node.icon,
+    description: node.description,
+    status: "idle",
+    nodeType: node.type,
+    config: node.defaultData,
+  });
+
+  return (
+    <div
+      draggable
+      onDragStart={onDragStart}
+      onClick={onClick}
+      className="group flex items-center gap-2 px-2 py-1.5 rounded-lg border border-transparent cursor-grab active:cursor-grabbing transition-all duration-150 hover:scale-[1.02] hover:border-border/50 bg-indigo-500/10 hover:bg-indigo-500/20"
+    >
+      <div className="w-6 h-6 flex items-center justify-center rounded-md text-indigo-500">
+        <span className="text-sm">{node.icon}</span>
+      </div>
+      <div className="flex-1 overflow-hidden">
+        <span className="block text-[12px] font-medium truncate">{node.name}</span>
+        <span className="block text-[9px] text-muted-foreground truncate">{node.description}</span>
+      </div>
+      <div className="opacity-0 group-hover:opacity-100 flex gap-0.5 transition-opacity">
+        <button
+          onClick={(e) => { e.stopPropagation(); setEditingNode(node); }}
+          className="p-1 hover:bg-background/50 rounded"
+          title="Edit"
+        >
+          <Settings2 className="w-3 h-3 text-muted-foreground" />
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); deleteCustomNode(node.type); }}
+          className="p-1 hover:bg-destructive/20 rounded"
+          title="Delete"
+        >
+          <Trash2 className="w-3 h-3 text-destructive" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function Sidebar() {
   const { sidebarCollapsed } = useFlowStore();
+  const { customNodes, setBuilderOpen } = useCustomNodeStore();
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['Triggers']));
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -133,10 +197,6 @@ export default function Sidebar() {
 
   return (
     <aside className="w-44 h-full bg-card/50 backdrop-blur-sm border-r border-border/50 flex flex-col">
-      <div className="px-2.5 py-2 border-b border-border/50">
-        <h2 className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Node Library</h2>
-      </div>
-
       <div className="px-2 py-1.5 border-b border-border/50">
         <div className="relative">
           <SearchIcon className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
@@ -185,6 +245,34 @@ export default function Sidebar() {
           ))
         )}
       </div>
+
+      {/* Custom Nodes Section */}
+        <div className="border-t border-border/50 pt-1">
+          <div className="flex items-center justify-between px-1.5 py-1">
+            <span className="text-[11px] font-semibold text-indigo-500">Custom Nodes</span>
+            <button
+              onClick={() => setBuilderOpen(true)}
+              className="p-1 hover:bg-muted rounded-md transition-colors"
+              title="Create custom node"
+            >
+              <Plus className="w-3.5 h-3.5 text-indigo-500" />
+            </button>
+          </div>
+          {customNodes.length === 0 ? (
+            <button
+              onClick={() => setBuilderOpen(true)}
+              className="w-full mx-1.5 mb-1.5 px-2 py-2 text-[10px] text-muted-foreground border border-dashed border-border rounded-lg hover:border-indigo-500/50 hover:bg-indigo-500/5 transition-colors"
+            >
+              + Create your first custom node
+            </button>
+          ) : (
+            <div className="px-1.5 pb-1.5 space-y-1">
+              {customNodes.map((node) => (
+                <CustomNodeItem key={node.type} node={node} />
+              ))}
+            </div>
+          )}
+        </div>
 
       <div className="px-2.5 py-1.5 border-t border-border/50 text-[9px] text-muted-foreground text-center">
         Drag or click to add

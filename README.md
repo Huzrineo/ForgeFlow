@@ -95,21 +95,46 @@ ForgeFlow/
 
 ## 🗺️ Roadmap
 
-### Phase 1 (MVP)
-- [x] Core engine
-- [x] Visual builder UI
-- [x] File + time triggers
-- [ ] Manual run execution
+### ✅ Completed
+- [x] Core execution engine with node-by-node visual feedback
+- [x] Visual node-based automation builder (drag & drop + click-to-add)
+- [x] Run/Stop workflow execution with real-time status
+- [x] Node status indicators (running/success/error with glow effects)
+- [x] Node settings panel (right sidebar configuration)
+- [x] Custom frameless titlebar with window controls
+- [x] Execution history with detailed node-level results
+- [x] Import/Export workflows as JSON (with drag-and-drop)
+- [x] Auto-layout algorithm for organizing workflows
+- [x] MiniMap with category-based coloring
+- [x] Local file persistence
+- [x] Specialized input fields (cron, hotkey, file picker)
+- [x] Dark mode UI
+- [x] **HTTP Request** action (GET, POST, PUT, DELETE with headers/body)
+- [x] **Shell/Script execution** (run commands with args and working dir)
+- [x] **File operations** (read, write, append, copy, move, delete, list, info)
+- [x] **Triggers** (manual, schedule/cron, webhook, file watcher, clipboard, hotkey, startup, Telegram)
+- [x] **Data utilities** (JSON parse/stringify, regex, math, CSV, date/time)
+- [x] **Zip compress/extract**
+- [x] **Excel write** support
+- [x] **Desktop notifications** (Windows toast notifications)
+- [x] **Conditional nodes** (if/else, switch, filter, type check, isEmpty)
+- [x] **Loop nodes** (forEach, repeat, while)
+- [x] **Error handling** (try/catch node with continueOnError)
+- [x] **Variables** with template syntax ({{variable}})
+- [x] Flow templates library
 
-### Phase 2
-- [ ] AI nodes with OpenAI/local models
-- [ ] HTTP actions
-- [ ] Logs & debugger
+### ✅ Recently Added
+- [x] **Ollama integration** (local LLM support, auto-detect models)
+- [x] **OpenAI/Groq/OpenRouter API** integration
+- [x] Background trigger activation (auto-start on app launch)
+- [x] **Undo/Redo** (Ctrl+Z / Ctrl+Y) with 50-step history
+- [x] **Copy/Paste nodes** (Ctrl+C / Ctrl+V)
+- [x] **Community Templates** (fetch & import from GitHub)
+- [x] **Custom Node Builder** (create your own nodes with shell/HTTP/JavaScript)
 
-### Phase 3
-- [ ] Mobile companion app (Flutter)
-- [ ] Notifications
-- [ ] Plugin system
+### 📋 Planned
+- [ ] System tray with background running
+- [ ] Global hotkey listener
 
 ## 📄 License
 

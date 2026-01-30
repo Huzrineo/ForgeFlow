@@ -9,6 +9,7 @@ import TemplatesModal from "@/components/layout/TemplatesModal";
 import ExecutionHistory from "@/components/layout/ExecutionHistory";
 import ImportExport from "@/components/layout/ImportExport";
 import SaveFlowDialog from "@/components/layout/SaveFlowDialog";
+import CustomNodeBuilder from "@/components/layout/CustomNodeBuilder";
 import FlowCanvas from "@/components/flow/FlowCanvas";
 import { DialogProvider } from "@/components/ui";
 import { useFlowStore } from "@/stores/flowStore";
@@ -119,6 +120,7 @@ export default function App() {
         {importExportOpen && <ImportExport onClose={() => setImportExportOpen(false)} />}
         <WorkflowsPanel />
         <TemplatesModal />
+        <CustomNodeBuilder />
         <DialogProvider />
         <SaveFlowDialog
           isOpen={saveDialogOpen}

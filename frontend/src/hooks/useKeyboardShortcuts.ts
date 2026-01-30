@@ -14,6 +14,12 @@ export function useKeyboardShortcuts() {
     clearCanvas,
     activeFlowId,
     flows,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    copyNode,
+    pasteNode,
   } = useFlowStore();
 
   const { setShortcutsModalOpen } = useWorkflowStore();
@@ -91,6 +97,38 @@ export function useKeyboardShortcuts() {
         setShortcutsModalOpen(true);
         return;
       }
+
+      // Ctrl+Z - undo
+      if (isMod && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        if (canUndo()) {
+          undo();
+        }
+        return;
+      }
+
+      // Ctrl+Y or Ctrl+Shift+Z - redo
+      if ((isMod && e.key === 'y') || (isMod && e.shiftKey && e.key === 'z')) {
+        e.preventDefault();
+        if (canRedo()) {
+          redo();
+        }
+        return;
+      }
+
+      // Ctrl+C - copy selected node
+      if (isMod && e.key === 'c' && selectedNodeId) {
+        e.preventDefault();
+        copyNode(selectedNodeId);
+        return;
+      }
+
+      // Ctrl+V - paste node
+      if (isMod && e.key === 'v') {
+        e.preventDefault();
+        pasteNode();
+        return;
+      }
     },
     [
       nodes,
@@ -104,6 +142,12 @@ export function useKeyboardShortcuts() {
       activeFlowId,
       flows,
       setShortcutsModalOpen,
+      undo,
+      redo,
+      canUndo,
+      canRedo,
+      copyNode,
+      pasteNode,
     ]
   );
 

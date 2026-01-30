@@ -23,11 +23,12 @@ export const aiNodes: NodeDefinition[] = [
     },
     fields: [
       { key: 'provider', label: 'Provider', type: 'select', options: [
+        { value: 'ollama', label: 'Ollama (Local)' },
         { value: 'openai', label: 'OpenAI' },
         { value: 'groq', label: 'Groq' },
         { value: 'openrouter', label: 'OpenRouter' },
         { value: 'custom', label: 'Custom Compatible' },
-      ], defaultValue: 'openai' },
+      ], defaultValue: 'ollama' },
       { key: 'model', label: 'Model', type: 'model-select' },
       { key: 'systemPrompt', label: 'System Prompt', type: 'textarea', placeholder: 'You are a helpful assistant...' },
       { key: 'prompt', label: 'User Prompt', type: 'textarea', placeholder: 'Your prompt... Use {{output}} for previous data', required: true },

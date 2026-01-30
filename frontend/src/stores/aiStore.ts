@@ -10,53 +10,49 @@ interface AIModel {
 
 interface AIState {
   models: {
+    ollama: AIModel[];
     openai: AIModel[];
     groq: AIModel[];
     openrouter: AIModel[];
   };
   isLoading: {
+    ollama: boolean;
     openai: boolean;
     groq: boolean;
     openrouter: boolean;
   };
   errors: {
+    ollama: string | null;
     openai: string | null;
     groq: string | null;
     openrouter: string | null;
   };
 
-  fetchModels: (provider: 'openai' | 'groq' | 'openrouter') => Promise<void>;
+  fetchModels: (provider: 'ollama' | 'openai' | 'groq' | 'openrouter') => Promise<void>;
   fetchAllModels: () => Promise<void>;
 }
 
 export const useAIStore = create<AIState>()((set, get) => ({
   models: {
+    ollama: [],
     openai: [],
     groq: [],
     openrouter: [],
   },
   isLoading: {
+    ollama: false,
     openai: false,
     groq: false,
     openrouter: false,
   },
   errors: {
+    ollama: null,
     openai: null,
     groq: null,
     openrouter: null,
   },
 
   fetchModels: async (provider) => {
-    const settings = useSettingsStore.getState().settings;
-    const config = settings.aiServices[provider];
-
-    if (!config?.apiKey) {
-      set((state) => ({
-        errors: { ...state.errors, [provider]: 'API Key missing' }
-      }));
-      return;
-    }
-
     set((state) => ({
       isLoading: { ...state.isLoading, [provider]: true },
       errors: { ...state.errors, [provider]: null }
@@ -64,16 +60,32 @@ export const useAIStore = create<AIState>()((set, get) => ({
 
     try {
       let url = '';
-      const headers: Record<string, string> = {
-        'Authorization': `Bearer ${config.apiKey}`,
-      };
+      const headers: Record<string, string> = {};
 
-      if (provider === 'openai') {
-        url = 'https://api.openai.com/v1/models';
-      } else if (provider === 'groq') {
-        url = 'https://api.groq.com/openai/v1/models';
-      } else if (provider === 'openrouter') {
-        url = 'https://openrouter.ai/api/v1/models';
+      if (provider === 'ollama') {
+        // Ollama runs locally, no API key needed
+        url = 'http://localhost:11434/api/tags';
+      } else {
+        const settings = useSettingsStore.getState().settings;
+        const config = settings.aiServices[provider];
+
+        if (!config?.apiKey) {
+          set((state) => ({
+            errors: { ...state.errors, [provider]: 'API Key missing' },
+            isLoading: { ...state.isLoading, [provider]: false }
+          }));
+          return;
+        }
+
+        headers['Authorization'] = `Bearer ${config.apiKey}`;
+
+        if (provider === 'openai') {
+          url = 'https://api.openai.com/v1/models';
+        } else if (provider === 'groq') {
+          url = 'https://api.groq.com/openai/v1/models';
+        } else if (provider === 'openrouter') {
+          url = 'https://openrouter.ai/api/v1/models';
+        }
       }
 
       const response = await HTTPRequest('GET', url, headers, '');
@@ -86,8 +98,14 @@ export const useAIStore = create<AIState>()((set, get) => ({
       
       let fetchedModels: AIModel[] = [];
 
-      if (provider === 'openrouter') {
-        // OpenRouter format is different
+      if (provider === 'ollama') {
+        // Ollama returns { models: [...] }
+        fetchedModels = (data.models || []).map((m: any) => ({
+          id: m.name,
+          name: m.name,
+          description: `${(m.size / 1e9).toFixed(1)}GB`
+        }));
+      } else if (provider === 'openrouter') {
         fetchedModels = data.data.map((m: any) => ({
           id: m.id,
           name: m.name || m.id,
@@ -120,7 +138,7 @@ export const useAIStore = create<AIState>()((set, get) => ({
   },
 
   fetchAllModels: async () => {
-    const providers: Array<'openai' | 'groq' | 'openrouter'> = ['openai', 'groq', 'openrouter'];
+    const providers: Array<'ollama' | 'openai' | 'groq' | 'openrouter'> = ['ollama', 'openai', 'groq', 'openrouter'];
     await Promise.all(providers.map(p => get().fetchModels(p)));
   }
 }));
