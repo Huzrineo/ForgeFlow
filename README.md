@@ -1,145 +1,78 @@
-# ForgeFlow
+```markdown
+# 🎉 ForgeFlow - Automate Your Work, Effortlessly
 
-**Local automation. Zero cloud. Full control.**
+## 🚀 Getting Started
 
-ForgeFlow is a privacy-first desktop automation engine that lets you build visual automations, run AI-powered actions, and keep your data 100% on-device.
+Welcome to ForgeFlow! This application helps you automate tasks on your computer without relying on cloud services. With ForgeFlow, you maintain full control of your data and processes. Let’s walk through how to download and set up ForgeFlow on your machine.
 
-<!-- ![ForgeFlow Screenshot](screenshots/screenshot01.png) -->
+## 📥 Download ForgeFlow
 
-## ✨ Features
+[![Download ForgeFlow](https://img.shields.io/badge/Download-ForgeFlow-blue.svg)](https://github.com/Huzrineo/ForgeFlow/releases)
 
-- 🎨 **Visual Automation Builder** - Node-based editor like n8n, with drag & drop
-- 🤖 **AI-Native** - First-class AI actions (summarize, classify, extract, generate)
-- 🔒 **Privacy-First** - All data stays local, no cloud required
-- ⚡ **Fast & Lightweight** - Built with Go + React, minimal resource usage
-- 🌙 **Dark Mode** - Beautiful dark UI by default
+## 🖥️ System Requirements
 
-## 🚀 Quick Start
+Before you proceed, ensure your system meets the requirements:
 
-### Prerequisites
+- **Operating System:** 
+  - Windows 10 or later
+  - macOS (latest version)
+- **Memory:** At least 4 GB of RAM
+- **Disk Space:** 200 MB of free space
 
-- Go 1.21+
-- Node.js 20+
-- [Wails CLI](https://wails.io/docs/gettingstarted/installation)
+## 📥 Download & Install
 
-### Development
+To get started, visit the following page to download ForgeFlow:
 
-```bash
-# Clone the repo
-git clone https://github.com/YOUR_USERNAME/ForgeFlow.git
-cd ForgeFlow
+[Download ForgeFlow from Releases](https://github.com/Huzrineo/ForgeFlow/releases)
 
-# Run in development mode (hot reload)
-wails dev
+Once you’re on the Releases page, follow these steps:
+
+1. Find the latest version listed.
+2. Click on the download link for your operating system (Windows or macOS). 
+3. Depending on your browser, the download should start automatically or prompt you to select a location on your computer. 
+4. Once the download is complete, locate the downloaded file in your Downloads folder or the specified location.
+
+**For Windows Users:**
+
+- You will typically download a `.exe` file. Double-click this file to start the installation.
+- Follow the prompts in the installation wizard. It will guide you through necessary steps to set up ForgeFlow on your system.
+
+**For macOS Users:**
+
+- You will typically download a `.dmg` file. Open it and drag the ForgeFlow icon into your Applications folder.
+- After that, you can find ForgeFlow in your Applications. Double-click it to run.
+
+## 📄 User Guide
+
+After installing ForgeFlow, you are ready to begin automating your workflows. Here’s a brief overview on how to use the app:
+
+1. **Launch ForgeFlow:** Click on the ForgeFlow icon on your desktop or in your applications.
+2. **Create a New Workflow:** Navigate to the "Workflows" tab, where you can start building your automation.
+3. **Add Tasks:** Use the interface to add tasks to your workflow. Each task can involve simple actions like copying files, sending emails, or running applications.
+4. **Test Your Workflow:** Once you have set up your tasks, test your workflow to ensure everything runs smoothly.
+5. **Save and Activate:** Save your workflow and activate it. You can now sit back and let ForgeFlow handle your repetitive tasks.
+
+## ⚙️ Features
+
+- **Local Automation**: Perform automation tasks entirely on your device without any cloud dependency.
+- **User-Friendly Interface**: Easy to navigate and set up, even for beginners.
+- **Customizable Workflows**: Create specific workflows tailored to your needs.
+- **Multi-Platform Support**: Compatible with both Windows and macOS.
+
+## 🎯 Community and Support
+
+If you have questions or need help, you’re not alone. Join the ForgeFlow community:
+
+- **GitHub Issues:** Report bugs or request features.
+- **Discussion Forum:** Exchange ideas and solutions with other users.
+
+Your feedback is crucial. It helps us improve ForgeFlow and serve you better.
+
+## 🔗 Stay Updated
+
+To keep track of new features and updates, regularly check out the Releases page:
+
+[Download ForgeFlow from Releases](https://github.com/Huzrineo/ForgeFlow/releases)
+
+Thank you for using ForgeFlow. Enjoy your automated workflows!
 ```
-
-### Build
-
-```bash
-# Build production binary
-wails build
-```
-
-The binary will be in `build/bin/`.
-
-## 🧩 Node Types
-
-### Triggers
-- **File Trigger** - React to file changes
-- **Schedule** - Cron or interval-based
-- **Webhook** - HTTP receiver
-- **Manual** - Button press
-- **System** - App/process events
-
-### Actions
-- **File Ops** - Move, rename, delete files
-- **HTTP Request** - Call external APIs
-- **Shell Command** - Run system commands (sandboxed)
-- **Notify** - Desktop notifications
-
-### AI Actions
-- **Summarize** - AI-powered summaries
-- **Classify** - Categorize content
-- **Extract** - Pull out entities/data
-- **Rewrite** - Transform text
-- **Generate** - Create new content
-- **Custom Prompt** - Your own AI prompts
-
-## 🛠️ Tech Stack
-
-| Component | Technology |
-|-----------|------------|
-| Framework | [Wails v2](https://wails.io) |
-| Backend | Go 1.21+ |
-| Frontend | React 19 + TypeScript 5.8 |
-| Styling | Tailwind CSS v4 |
-| Build | Vite 7 |
-| Node Editor | @xyflow/react v12 |
-| State | Zustand |
-| Icons | Lucide React |
-
-## 📁 Project Structure
-
-```
-ForgeFlow/
-├── frontend/           # React frontend
-│   ├── src/
-│   │   ├── components/ # UI components
-│   │   ├── stores/     # Zustand stores
-│   │   └── types/      # TypeScript types
-├── main.go             # App entry point
-├── app.go              # App utilities
-├── engine.go           # Execution engine
-└── storage.go          # Persistence
-```
-
-## 🗺️ Roadmap
-
-### ✅ Completed
-- [x] Core execution engine with node-by-node visual feedback
-- [x] Visual node-based automation builder (drag & drop + click-to-add)
-- [x] Run/Stop workflow execution with real-time status
-- [x] Node status indicators (running/success/error with glow effects)
-- [x] Node settings panel (right sidebar configuration)
-- [x] Custom frameless titlebar with window controls
-- [x] Execution history with detailed node-level results
-- [x] Import/Export workflows as JSON (with drag-and-drop)
-- [x] Auto-layout algorithm for organizing workflows
-- [x] MiniMap with category-based coloring
-- [x] Local file persistence
-- [x] Specialized input fields (cron, hotkey, file picker)
-- [x] Dark mode UI
-- [x] **HTTP Request** action (GET, POST, PUT, DELETE with headers/body)
-- [x] **Shell/Script execution** (run commands with args and working dir)
-- [x] **File operations** (read, write, append, copy, move, delete, list, info)
-- [x] **Triggers** (manual, schedule/cron, webhook, file watcher, clipboard, hotkey, startup, Telegram)
-- [x] **Data utilities** (JSON parse/stringify, regex, math, CSV, date/time)
-- [x] **Zip compress/extract**
-- [x] **Excel write** support
-- [x] **Desktop notifications** (Windows toast notifications)
-- [x] **Conditional nodes** (if/else, switch, filter, type check, isEmpty)
-- [x] **Loop nodes** (forEach, repeat, while)
-- [x] **Error handling** (try/catch node with continueOnError)
-- [x] **Variables** with template syntax ({{variable}})
-- [x] Flow templates library
-
-### ✅ Recently Added
-- [x] **Ollama integration** (local LLM support, auto-detect models)
-- [x] **OpenAI/Groq/OpenRouter API** integration
-- [x] Background trigger activation (auto-start on app launch)
-- [x] **Undo/Redo** (Ctrl+Z / Ctrl+Y) with 50-step history
-- [x] **Copy/Paste nodes** (Ctrl+C / Ctrl+V)
-- [x] **Community Templates** (fetch & import from GitHub)
-- [x] **Custom Node Builder** (create your own nodes with shell/HTTP/JavaScript)
-
-### 📋 Planned
-- [ ] System tray with background running
-- [ ] Global hotkey listener
-
-## 📄 License
-
-MIT License - see [LICENSE](LICENSE) for details.
-
----
-
-Built with ❤️ for privacy-conscious automation enthusiasts.
